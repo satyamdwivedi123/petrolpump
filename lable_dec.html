@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Tank Lorry Sample Label Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14181C;
+    --panel: #1B2126;
+    --panel-2: #222A31;
+    --line: #323C44;
+    --amber: #F2A93C;
+    --diesel: #6FA383;
+    --text: #E8E6E0;
+    --muted: #8B93A0;
+    --danger: #E06B5C;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:
+      repeating-linear-gradient(135deg, rgba(255,255,255,0.015) 0 2px, transparent 2px 40px),
+      var(--bg);
+    color:var(--text);
+    font-family:'IBM Plex Mono', monospace;
+    min-height:100vh;
+    padding:32px 20px 60px;
+  }
+  .wrap{max-width:760px;margin:0 auto;}
+  header{margin-bottom:32px;border-bottom:1px solid var(--line);padding-bottom:20px;}
+  .eyebrow{
+    font-size:11px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase;margin-bottom:8px;
+    display:flex;align-items:center;gap:8px;
+  }
+  .eyebrow::before{content:"";width:18px;height:2px;background:var(--amber);display:inline-block;}
+  h1{
+    font-family:'Oswald',sans-serif;font-weight:700;font-size:30px;letter-spacing:.01em;
+    margin:0 0 6px;text-transform:uppercase;
+  }
+  .sub{color:var(--muted);font-size:13.5px;line-height:1.5;max-width:56ch;}
+
+  .stage{
+    display:flex;align-items:center;gap:0;margin:26px 0 36px;
+  }
+  .stage .step{
+    flex:1;text-align:center;position:relative;
+  }
+  .stage .step .dot{
+    width:26px;height:26px;border-radius:50%;border:2px solid var(--line);
+    display:flex;align-items:center;justify-content:center;margin:0 auto 6px;
+    font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;color:var(--muted);
+    background:var(--panel);position:relative;z-index:1;
+  }
+  .stage .step.active .dot{border-color:var(--amber);color:var(--amber);}
+  .stage .step.done .dot{border-color:var(--diesel);color:var(--diesel);background:rgba(111,163,131,0.12);}
+  .stage .step .lbl{font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;}
+  .stage .step.active .lbl{color:var(--text);}
+  .stage .bar{position:absolute;top:13px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0;}
+  .stage .step:first-child .bar{display:none;}
+
+  section{
+    background:var(--panel);border:1px solid var(--line);border-radius:2px;
+    padding:22px 22px 24px;margin-bottom:18px;
+  }
+  section h2{
+    font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--amber);margin:0 0 4px;font-weight:600;
+  }
+  section p.hint{color:var(--muted);font-size:12.5px;margin:0 0 16px;line-height:1.5;}
+
+  #dropzone{
+    border:1.5px dashed var(--line);border-radius:2px;padding:28px 16px;text-align:center;
+    cursor:pointer;transition:border-color .15s, background .15s;
+  }
+  #dropzone:hover, #dropzone.drag{border-color:var(--amber);background:rgba(242,169,60,0.05);}
+  #dropzone .icon{font-size:22px;margin-bottom:8px;color:var(--muted);}
+  #dropzone .main{font-size:13.5px;}
+  #dropzone .main b{color:var(--amber);}
+  #dropzone .fname{margin-top:10px;font-size:12.5px;color:var(--diesel);}
+  input[type=file]{display:none;}
+
+  .field{margin-bottom:16px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{
+    display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;
+  }
+  .field .row{display:flex;gap:10px;}
+  input[type=text], select{
+    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
+    padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;border-radius:2px;
+    outline:none;transition:border-color .15s;
+  }
+  input[type=text]:focus, select:focus{border-color:var(--amber);}
+  .badge{
+    display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;
+    padding:2px 7px;border-radius:2px;margin-left:8px;vertical-align:middle;
+  }
+  .badge.auto{background:rgba(111,163,131,0.15);color:var(--diesel);border:1px solid rgba(111,163,131,0.4);}
+  .badge.manual{background:rgba(224,107,92,0.12);color:var(--danger);border:1px solid rgba(224,107,92,0.35);}
+
+  .tank-note{font-size:12px;color:var(--muted);margin-top:6px;}
+
+  button.primary{
+    width:100%;background:var(--amber);color:#1A1200;border:none;padding:14px;
+    font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
+    font-size:14px;border-radius:2px;cursor:pointer;transition:filter .15s;
+  }
+  button.primary:hover{filter:brightness(1.08);}
+  button.primary:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;}
+  button.ghost{
+    width:100%;background:transparent;color:var(--text);border:1px solid var(--line);padding:12px;
+    font-family:'IBM Plex Mono',monospace;font-size:13px;border-radius:2px;cursor:pointer;margin-top:10px;
+  }
+  button.ghost:hover{border-color:var(--amber);}
+
+  #status{font-size:12.5px;color:var(--muted);margin-top:10px;min-height:16px;}
+  #status.err{color:var(--danger);}
+  #status.ok{color:var(--diesel);}
+
+  footer{text-align:center;color:var(--muted);font-size:11px;margin-top:30px;letter-spacing:.03em;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Depot Tools</div>
+    <h1>Tank Lorry Sample Label Generator</h1>
+    <p class="sub">Upload the HPCL billing invoice PDF. The tool reads the lorry number, invoice number, product and transporter, then produces a printable retention-sample label PDF (4 up, matching the standard depot format).</p>
+  </header>
+
+  <div class="stage">
+    <div class="step active" id="s1"><div class="dot">1</div><div class="lbl">Upload</div></div>
+    <div class="step" id="s2"><div class="bar"></div><div class="dot">2</div><div class="lbl">Review</div></div>
+    <div class="step" id="s3"><div class="bar"></div><div class="dot">3</div><div class="lbl">Generate</div></div>
+  </div>
+
+  <section>
+    <h2>Step 1 — Invoice</h2>
+    <p class="hint">PDF only. Nothing leaves your browser — extraction and PDF generation both happen locally.</p>
+    <div id="dropzone">
+      <div class="icon">&#8593;</div>
+      <div class="main"><b>Click to upload</b> or drop the invoice PDF here</div>
+      <div class="fname" id="fname"></div>
+    </div>
+    <input type="file" id="fileInput" accept="application/pdf">
+    <div id="status"></div>
+  </section>
+
+  <section id="reviewSection" style="display:none;">
+    <h2>Step 2 — Review extracted fields</h2>
+    <p class="hint">Auto-detected values are marked <span class="badge auto">auto</span>. Check them against the invoice and correct anything that's off before generating.</p>
+
+    <div class="field">
+      <label>Lorry / Vehicle Number <span id="badge-vehicle"></span></label>
+      <input type="text" id="vehicleNo" placeholder="e.g. MP17HH4923">
+    </div>
+
+    <div class="field">
+      <label>Invoice Number <span id="badge-invoice"></span></label>
+      <input type="text" id="invoiceNo" placeholder="e.g. 9023905377">
+    </div>
+
+    <div class="field">
+      <label>Product <span id="badge-product"></span></label>
+      <select id="product">
+        <option value="MS">MS &mdash; RO Tank No. 1</option>
+        <option value="HSD">HSD &mdash; RO Tank No. 2</option>
+      </select>
+      <div class="tank-note">RO Tank No. is set automatically from the product: MS &rarr; Tank 1, HSD &rarr; Tank 2.</div>
+    </div>
+
+    <div class="field">
+      <label>Transporter / Carrier Name <span id="badge-transporter"></span></label>
+      <input type="text" id="transporterName" placeholder="e.g. MADHUSUDAN">
+    </div>
+  </section>
+
+  <section id="generateSection" style="display:none;">
+    <h2>Step 3 — Generate</h2>
+    <p class="hint">Creates one page with 4 retention-sample labels, filled with the values above.</p>
+    <button class="primary" id="genBtn">Generate Label PDF</button>
+    <button class="ghost" id="resetBtn">Start over with a new invoice</button>
+  </section>
+
+  <footer>Runs entirely client-side. Re-open this file any time — no server, no upload required.</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const dropzone = document.getElementById('dropzone');
+const fileInput = document.getElementById('fileInput');
+const fnameEl = document.getElementById('fname');
+const statusEl = document.getElementById('status');
+const reviewSection = document.getElementById('reviewSection');
+const generateSection = document.getElementById('generateSection');
+
+dropzone.addEventListener('click', () => fileInput.click());
+dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+dropzone.addEventListener('drop', e => {
+  e.preventDefault(); dropzone.classList.remove('drag');
+  if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+
+function setStage(n){
+  for (const i of [1,2,3]){
+    const el = document.getElementById('s'+i);
+    el.classList.remove('active','done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  }
+}
+
+function setStatus(msg, type){
+  statusEl.textContent = msg;
+  statusEl.className = type || '';
+}
+
+async function handleFile(file){
+  if (file.type !== 'application/pdf'){
+    setStatus('Please upload a PDF file.', 'err');
+    return;
+  }
+  fnameEl.textContent = file.name;
+  setStatus('Reading invoice…');
+  try{
+    const buf = await file.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    let fullText = '';
+    for (let p = 1; p <= pdf.numPages; p++){
+      const page = await pdf.getPage(p);
+      const content = await page.getTextContent();
+      fullText += content.items.map(it => it.str).join(' ') + ' ';
+    }
+    const fields = extractFields(fullText);
+    populateReview(fields);
+    setStatus('Extraction complete. Review the fields below.', 'ok');
+    reviewSection.style.display = 'block';
+    generateSection.style.display = 'block';
+    setStage(2);
+    reviewSection.scrollIntoView({behavior:'smooth', block:'start'});
+  }catch(err){
+    console.error(err);
+    setStatus('Could not read that PDF. You can still fill fields in manually below.', 'err');
+    populateReview({});
+    reviewSection.style.display = 'block';
+    generateSection.style.display = 'block';
+    setStage(2);
+  }
+}
+
+const STOPWORDS = new Set([
+  'CARRIER','NAME','VEHICLE','INVOICE','NO','ORDER','DATE','LOAD','MODE','PAN','TIN','VAT',
+  'GST','GSTAX','LOC','CODE','SOLD','SHIP','TO','HPC','DEALER','STATION','FILLING','JABALPUR',
+  'DEPOT','REGISTERED','OFFICE','MUMBAI','ROAD','TATA','JAMSHEDJI','LIMITED','CORPORATION',
+  'PETROLEUM','HINDUSTAN','GOVERNMENT','INDIA','ENTERPRISE','CIN','FORM','TYPE','SALES','TAX',
+  'DESCRIPTION','ITEM','QTY','VOLUME','RATE','UNIT','AMOUNT','EXTENDED','SR','ST','CD','UT','TANK'
+]);
+
+function extractFields(text){
+  const tokens = text.split(/\s+/).filter(Boolean);
+
+  function findNear(labelParts, valueRegex, window){
+    window = window || 12;
+    for (let i=0; i<tokens.length; i++){
+      let matched = true;
+      for (let j=0; j<labelParts.length; j++){
+        if (!tokens[i+j] || !labelParts[j].test(tokens[i+j])) { matched = false; break; }
+      }
+      if (matched){
+        const start = Math.max(0, i - window);
+        const end = Math.min(tokens.length, i + labelParts.length + window);
+        for (let k=start; k<end; k++){
+          if (k >= i && k < i + labelParts.length) continue; // skip the label tokens themselves
+          const clean = tokens[k].replace(/[.,:;]+$/, '');
+          if (STOPWORDS.has(clean.toUpperCase())) continue; // skip other header/column noise words
+          if (valueRegex.test(clean)) return clean;
+        }
+      }
+    }
+    return '';
+  }
+
+  const vehicleNo = findNear([/^VEHICLE$/i, /^NO\.?$/i], /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{3,4}$/);
+  const invoiceNo = findNear([/^INVOICE$/i, /^NO\.?$/i], /^\d{6,10}$/);
+  const transporterName = findNear([/^CARRIER$/i, /^NAME$/i], /^[A-Z]{3,}$/);
+
+  let product = '';
+  if (/\bHSD\b/i.test(text)) product = 'HSD';
+  else if (/\bMS\b(?!\/HSD)/i.test(text)) product = 'MS';
+
+  return { vehicleNo, invoiceNo, transporterName, product };
+}
+
+function badge(id, found){
+  document.getElementById(id).innerHTML = found
+    ? '<span class="badge auto">auto</span>'
+    : '<span class="badge manual">check</span>';
+}
+
+function populateReview(f){
+  document.getElementById('vehicleNo').value = f.vehicleNo || '';
+  document.getElementById('invoiceNo').value = f.invoiceNo || '';
+  document.getElementById('transporterName').value = f.transporterName || '';
+  document.getElementById('product').value = f.product === 'HSD' ? 'HSD' : (f.product === 'MS' ? 'MS' : 'MS');
+
+  badge('badge-vehicle', !!f.vehicleNo);
+  badge('badge-invoice', !!f.invoiceNo);
+  badge('badge-transporter', !!f.transporterName);
+  badge('badge-product', !!f.product);
+}
+
+document.getElementById('resetBtn').addEventListener('click', () => {
+  fileInput.value = '';
+  fnameEl.textContent = '';
+  reviewSection.style.display = 'none';
+  generateSection.style.display = 'none';
+  setStatus('');
+  setStage(1);
+  window.scrollTo({top:0, behavior:'smooth'});
+});
+
+document.getElementById('genBtn').addEventListener('click', () => {
+  setStage(3);
+  const data = {
+    vehicleNo: document.getElementById('vehicleNo').value.trim() || '—',
+    invoiceNo: document.getElementById('invoiceNo').value.trim() || '—',
+    product: document.getElementById('product').value,
+    transporterName: document.getElementById('transporterName').value.trim() || '—',
+  };
+  data.roTank = data.product === 'MS' ? '1' : '2';
+  buildPdf(data);
+});
+
+function buildPdf(data){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+  const pageW = 210, pageH = 297;
+  const margin = 8;
+  const gap = 4;
+  const cellW = (pageW - margin*2 - gap) / 2;
+  const cellH = (pageH - margin*2 - gap) / 2;
+
+  const positions = [
+    [margin, margin],
+    [margin + cellW + gap, margin],
+    [margin, margin + cellH + gap],
+    [margin + cellW + gap, margin + cellH + gap],
+  ];
+
+  positions.forEach(([x,y]) => drawLabel(doc, x, y, cellW, cellH, data));
+  doc.save('tank-lorry-sample-labels-' + (data.invoiceNo !== '—' ? data.invoiceNo : 'label') + '.pdf');
+  setStatus('PDF generated and downloaded.', 'ok');
+}
+
+function drawLabel(doc, x, y, w, h, data){
+  doc.setDrawColor(60,60,60);
+  doc.setLineWidth(0.2);
+  doc.rect(x, y, w, h);
+
+  let cy = y + 5;
+  const left = x + 3;
+  const right = x + w - 3;
+  const lh = 3.6;
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(8.5);
+  doc.text('SAMPLE LABEL - TANK LORRY RETENTION SAMPLE', x + w/2, cy, {align:'center'});
+  cy += lh;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7);
+  doc.text('(DRAWN AT RETAIL OUTLETS)', x + w/2, cy, {align:'center'});
+  cy += lh + 0.5;
+
+  doc.setFontSize(6.6);
+  doc.text('SUPPLY LOCATION: JABALPUR, REGION: REWA', left, cy);
+  cy += lh;
+
+  const lines = [
+    '1. Name & address of Retail Outlet: M/s VIBHA FILLING STATION,',
+    '    Rajapur (Teonthar)',
+    '2. Name of the Oil Company: HPCL',
+    '3. Product: ' + data.product,
+    '4. Source of sample: TANK LORRY',
+  ];
+
+  lines.forEach(l => { doc.text(l, left, cy); cy += lh; });
+
+  cy += 0.5;
+  doc.setFont('helvetica', 'bold');
+  doc.text('5. Tank Lorry No.: ' + data.vehicleNo, left, cy);
+  cy += lh;
+  doc.text('    Invoice No.: ' + data.invoiceNo, left, cy);
+  doc.setFont('helvetica', 'normal');
+  cy += lh + 0.5;
+
+  doc.text('6. Samples drawn on ____________ at ____________ hours', left, cy);
+  cy += lh;
+  doc.text('7. Density at 15°C  a) as per Challan ____________', left, cy);
+  cy += lh;
+  doc.text('    b) of sample collected from lorry ____________', left, cy);
+  cy += lh + 0.5;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('8. RO Tank No. of Product decanted: ' + data.roTank, left, cy);
+  doc.setFont('helvetica', 'normal');
+  cy += lh + 0.5;
+
+  doc.text('9. Plastic Seal Nos. of Aluminium container: ____________', left, cy);
+  cy += lh;
+  doc.text('10. Plastic Seal Nos. of wooden box: ____________', left, cy);
+  cy += lh + 1.5;
+
+  doc.setFontSize(6);
+  const cert = 'Certified that empty containers are rinsed in my presence with the same product just before drawing of samples and the sample is retained after proper labeling and sealing.';
+  const wrapped = doc.splitTextToSize(cert, w - 6);
+  wrapped.forEach(l => { doc.text(l, left, cy); cy += 3; });
+  cy += 1;
+
+  doc.setFontSize(6.6);
+  doc.text('Signature of Dealer/Representative: ____________', left, cy);
+  cy += lh;
+  doc.text('Place: Rajapur, Teonthar        Date: ____________', left, cy);
+  cy += lh;
+  doc.text('Name of T/L driver: ____________', left, cy);
+  cy += lh;
+  doc.text('Signature of T/L driver: ____________', left, cy);
+  cy += lh;
+  doc.setFont('helvetica', 'bold');
+  doc.text('Transporter\'s name: ' + data.transporterName, left, cy);
+  doc.setFont('helvetica', 'normal');
+  cy += lh;
+  doc.setFontSize(6);
+  doc.text('Oil Company: HINDUSTAN PETROLEUM CORPORATION LIMITED', left, cy);
+}
+</script>
+</body>
+</html>
