@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Daily Hisab — Pump Register</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Slab:wght@500;700&family=DM+Mono:wght@400;500&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!--
+  =========================================================================
+  SETUP:
+  1. Deploy hisab-appsscript.gs as a Web App (see instructions inside that
+     file). Copy the Web App URL it gives you.
+  2. Paste that URL into APPSSCRIPT_URL below, replacing the placeholder.
+  3. Host this file for free on GitHub Pages / Netlify / Vercel. Open the
+     URL on any phone or laptop — everyone reads/writes the same Sheet.
+  =========================================================================
+-->
+<style>
+  :root{
+    --paper:#FBF3DF; --paper-dark:#F1E4C3; --paper-line:#E4D3A6;
+    --ink:#241F1C; --ink-soft:#5B5147;
+    --red-rule:#B33951; --blue-rule:#2E5090;
+    --brass:#A9781F; --brass-light:#D4A73B;
+    --green:#2F6E4F; --green-bg:#E4F0E8;
+    --red-short:#AE3A2C; --red-bg:#F6E4E1;
+    --shadow: 0 2px 10px rgba(36,31,28,.12), 0 1px 2px rgba(36,31,28,.08);
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--paper-dark);font-family:'Inter',sans-serif;color:var(--ink);padding:24px 12px 60px;}
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  header{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:20px;flex-wrap:wrap;}
+  .brand{display:flex;align-items:center;gap:14px;}
+  .brand .dial-mini{width:46px;height:46px;flex:none;}
+  .brand h1{font-family:'Roboto Slab',serif;font-weight:700;font-size:1.5rem;margin:0;letter-spacing:.3px;}
+  .brand p{margin:2px 0 0;font-size:.78rem;color:var(--ink-soft);letter-spacing:.06em;text-transform:uppercase;display:flex;align-items:center;gap:6px;}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#c9b98a;display:inline-block;}
+  .live-dot.on{background:var(--green);box-shadow:0 0 0 3px var(--green-bg);}
+  .live-dot.off{background:var(--red-short);box-shadow:0 0 0 3px var(--red-bg);}
+
+  .top-controls{display:flex;gap:10px;flex-wrap:wrap;}
+  .picker{background:var(--paper);border:1px solid var(--paper-line);border-radius:8px;padding:8px 12px;box-shadow:var(--shadow);display:flex;align-items:center;gap:8px;}
+  .picker label{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+  .picker input,.picker select{font-family:'DM Mono',monospace;font-size:.9rem;border:none;background:transparent;color:var(--ink);outline:none;}
+  .picker select{cursor:pointer;}
+  .icon-add{border:none;background:var(--brass);color:#fff;width:22px;height:22px;border-radius:50%;cursor:pointer;font-size:.85rem;line-height:1;}
+  .icon-add:hover{background:var(--brass-light);}
+
+  .ledger{background:var(--paper);border-radius:10px;box-shadow:var(--shadow);position:relative;padding:22px 22px 22px 34px;margin-bottom:22px;border:1px solid var(--paper-line);}
+  .ledger::before{content:"";position:absolute;left:20px;top:0;bottom:0;width:1.5px;background:var(--red-rule);opacity:.55;}
+  .ledger h2{font-family:'Roboto Slab',serif;font-size:1.02rem;margin:0 0 16px;display:flex;align-items:center;gap:8px;color:var(--ink);}
+  .ledger h2 .n{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:50%;background:var(--brass);color:var(--paper);font-family:'DM Mono',monospace;font-size:.72rem;}
+
+  .products-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:18px;}
+  @media (max-width:760px){.products-grid{grid-template-columns:1fr;}}
+  .product-card{background:var(--paper-dark);border:1px solid var(--paper-line);border-radius:8px;padding:14px 14px 12px;}
+  .product-card .ptitle{font-family:'DM Mono',monospace;font-weight:500;font-size:.85rem;text-transform:uppercase;letter-spacing:.08em;color:var(--brass);display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px;}
+  .field-row.three{grid-template-columns:1fr 1fr 1fr;}
+  .field{display:flex;flex-direction:column;gap:3px;}
+  .field label{font-size:.68rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-soft);}
+  .field input{font-family:'DM Mono',monospace;font-size:.9rem;padding:7px 8px;border:1px solid var(--paper-line);border-radius:5px;background:#fff;color:var(--ink);width:100%;outline:none;transition:border-color .15s;}
+  .field input:focus{border-color:var(--brass);}
+  .field input.err{border-color:var(--red-short);background:var(--red-bg);}
+  .field input:disabled{color:var(--ink-soft);background:var(--paper-dark);}
+  .product-total{display:flex;justify-content:space-between;align-items:baseline;margin-top:8px;padding-top:8px;border-top:1px dashed var(--paper-line);font-family:'DM Mono',monospace;}
+  .product-total span:first-child{font-size:.72rem;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em;}
+  .product-total span:last-child{font-size:1rem;font-weight:500;}
+  .subnote{font-size:.68rem;color:var(--ink-soft);margin-top:2px;}
+
+  .pay-grid{display:grid;grid-template-columns:1.4fr 1fr;gap:14px;margin-bottom:14px;}
+  @media (max-width:760px){.pay-grid{grid-template-columns:1fr;}}
+  .pay-grid2{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:18px;}
+  @media (max-width:760px){.pay-grid2{grid-template-columns:1fr;}}
+  .pay-card{background:var(--paper-dark);border:1px solid var(--paper-line);border-radius:8px;padding:14px;}
+  .pay-card .ptitle{font-family:'DM Mono',monospace;font-weight:500;font-size:.8rem;text-transform:uppercase;letter-spacing:.08em;color:var(--blue-rule);margin-bottom:10px;}
+  .simple-amt{display:flex;flex-direction:column;gap:3px;height:100%;justify-content:center;}
+  .denom-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:8px;}
+  @media (max-width:500px){.denom-grid{grid-template-columns:repeat(3,1fr);}}
+  .denom-field{display:flex;flex-direction:column;gap:3px;}
+  .denom-field label{font-size:.66rem;color:var(--ink-soft);}
+  .denom-field .value-hint{font-size:.62rem;color:var(--ink-soft);}
+  .denom-field input{font-family:'DM Mono',monospace;font-size:.85rem;padding:6px 6px;border:1px solid var(--paper-line);border-radius:5px;background:#fff;width:100%;text-align:center;}
+
+  .summary{display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:14px;align-items:center;background:var(--paper-dark);border:1px solid var(--paper-line);border-radius:8px;padding:16px;margin-bottom:16px;}
+  @media (max-width:780px){.summary{grid-template-columns:1fr 1fr;}}
+  .stat .label{font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);margin-bottom:3px;}
+  .stat .val{font-family:'DM Mono',monospace;font-size:1.25rem;font-weight:500;}
+  .stat.diffstat .val.short{color:var(--red-short);}
+  .stat.diffstat .val.excess{color:var(--green);}
+  .dial-wrap{display:flex;flex-direction:column;align-items:center;gap:2px;}
+  .dial-wrap .dial-caption{font-size:.65rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-soft);}
+
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+  button{font-family:'Inter',sans-serif;font-weight:600;font-size:.85rem;border:none;border-radius:7px;padding:10px 18px;cursor:pointer;transition:transform .1s;}
+  button:disabled{opacity:.5;cursor:not-allowed;}
+  button:active{transform:translateY(1px);}
+  .btn-primary{background:var(--brass);color:#fff;box-shadow:0 2px 6px rgba(169,120,31,.35);}
+  .btn-primary:hover{background:var(--brass-light);}
+  .btn-secondary{background:transparent;color:var(--ink);border:1px solid var(--paper-line);}
+  .btn-secondary:hover{border-color:var(--brass);color:var(--brass);}
+  .status-msg{font-size:.78rem;color:var(--green);font-family:'DM Mono',monospace;opacity:0;transition:opacity .3s;}
+  .status-msg.show{opacity:1;}
+
+  .history{background:var(--paper);border-radius:10px;box-shadow:var(--shadow);border:1px solid var(--paper-line);padding:20px 22px;}
+  .history-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:10px;}
+  .history-head h2{font-family:'Roboto Slab',serif;font-size:1.02rem;margin:0;}
+  .table-scroll{overflow:auto;max-height:520px;}
+  table{width:100%;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:.8rem;}
+  thead th{position:sticky;top:0;background:var(--paper);text-align:right;font-family:'Inter',sans-serif;font-weight:600;font-size:.65rem;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);padding:6px 7px;border-bottom:2px solid var(--blue-rule);}
+  thead th:first-child,thead th:nth-child(2){text-align:left;}
+  tbody td{padding:7px;text-align:right;border-bottom:1px solid var(--paper-line);white-space:nowrap;}
+  tbody td:first-child,tbody td:nth-child(2){text-align:left;}
+  tbody tr:hover{background:var(--paper-dark);}
+  tbody tr:nth-child(even){background:rgba(46,80,144,.03);}
+  .pill{padding:2px 8px;border-radius:20px;font-size:.72rem;font-weight:500;}
+  .pill.excess{background:var(--green-bg);color:var(--green);}
+  .pill.short{background:var(--red-bg);color:var(--red-short);}
+  .pill.zero{background:var(--paper-dark);color:var(--ink-soft);}
+  .row-actions{display:flex;gap:6px;justify-content:flex-end;}
+  .icon-btn{border:none;background:transparent;cursor:pointer;font-size:.85rem;padding:3px 6px;border-radius:4px;color:var(--ink-soft);}
+  .icon-btn:hover{background:var(--paper-dark);color:var(--brass);}
+  .empty-row td{text-align:center;color:var(--ink-soft);padding:24px;font-family:'Inter',sans-serif;}
+  tfoot td{padding:9px 7px;text-align:right;font-weight:700;border-top:2px solid var(--blue-rule);background:var(--paper-dark);}
+  tfoot td:first-child{text-align:left;}
+  .config-warning{max-width:1080px;margin:0 auto 20px;background:var(--red-bg);border:1px solid var(--red-short);color:var(--red-short);padding:14px 18px;border-radius:8px;font-size:.85rem;line-height:1.5;}
+  .config-warning code{background:rgba(0,0,0,.06);padding:1px 5px;border-radius:4px;}
+  footer{text-align:center;margin-top:20px;font-size:.72rem;color:var(--ink-soft);}
+
+  @media print{
+    body{background:#fff;padding:0;}
+    .ledger,.top-controls,.actions,.icon-btn,footer,.config-warning{display:none !important;}
+    .history{box-shadow:none;border:none;}
+    header{margin-bottom:10px;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="configWarning" class="config-warning" style="display:none;">
+    ⚠️ Not connected yet. Open this file in a text editor, find <code>APPSSCRIPT_URL</code> near the top of the script, and paste in your deployed Apps Script Web App URL (see setup steps in the HTML comment at the top of the file, and hisab-appsscript.gs).
+  </div>
+
+  <header>
+    <div class="brand">
+      <svg class="dial-mini" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46" fill="#FBF3DF" stroke="#A9781F" stroke-width="4"/><line x1="50" y1="50" x2="50" y2="18" stroke="#B33951" stroke-width="4" stroke-linecap="round"/><circle cx="50" cy="50" r="5" fill="#241F1C"/></svg>
+      <div>
+        <h1>Daily Hisab</h1>
+        <p><span class="live-dot" id="liveDot"></span><span id="liveLabel">Connecting…</span></p>
+      </div>
+    </div>
+    <div class="top-controls">
+      <div class="picker">
+        <label for="salesmanSelect">Salesman</label>
+        <select id="salesmanSelect"><option value="">Loading…</option></select>
+        <button class="icon-add" id="addSalesmanBtn" title="Add salesman">+</button>
+      </div>
+      <div class="picker">
+        <label for="entryDate">Date</label>
+        <input type="date" id="entryDate">
+      </div>
+    </div>
+  </header>
+
+  <div class="ledger">
+    <h2><span class="n">1</span> Meter Readings, Test &amp; Product Sale</h2>
+    <div class="products-grid" id="productsGrid"></div>
+
+    <h2><span class="n">2</span> Collections</h2>
+    <div class="pay-grid">
+      <div class="pay-card">
+        <div class="ptitle">Cash — count notes, total auto-calculates</div>
+        <div class="denom-grid" id="denomGrid"></div>
+        <div class="product-total"><span>Cash Total</span><span id="cashTotal">₹0.00</span></div>
+      </div>
+      <div class="pay-card">
+        <div class="ptitle">UPI (machine reading)</div>
+        <div class="field-row">
+          <div class="field"><label>Initial UPI</label><input type="number" step="0.01" id="upiInitial" placeholder="0.00"></div>
+          <div class="field"><label>Final UPI</label><input type="number" step="0.01" id="upiFinal" placeholder="0.00"></div>
+        </div>
+        <div class="product-total"><span>UPI Collected</span><span id="upiAmt">₹0.00</span></div>
+      </div>
+    </div>
+    <div class="pay-grid2">
+      <div class="pay-card"><div class="ptitle">Credit</div><div class="simple-amt"><div class="field"><label>Credit Amount</label><input type="number" step="0.01" id="creditAmt" placeholder="0.00"></div></div></div>
+      <div class="pay-card"><div class="ptitle">DT Plus</div><div class="simple-amt"><div class="field"><label>DT Plus Amount</label><input type="number" step="0.01" id="dtPlusAmt" placeholder="0.00"></div></div></div>
+      <div class="pay-card"><div class="ptitle">Other</div><div class="simple-amt"><div class="field"><label>Other Amount</label><input type="number" step="0.01" id="otherAmt" placeholder="0.00"></div></div></div>
+    </div>
+
+    <h2><span class="n">3</span> Hisab Summary</h2>
+    <div class="summary">
+      <div class="stat"><div class="label">Total Sale (MS+HSD, after test)</div><div class="val" id="sumSale">₹0.00</div></div>
+      <div class="stat"><div class="label">Total Collection</div><div class="val" id="sumCollection">₹0.00</div></div>
+      <div class="stat diffstat"><div class="label">Difference (Collection − Sale)</div><div class="val" id="sumDiff">₹0.00</div></div>
+      <div class="dial-wrap">
+        <svg id="gaugeSvg" width="92" height="58" viewBox="0 0 120 70"></svg>
+        <div class="dial-caption" id="gaugeCaption">Balanced</div>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" id="saveBtn">Save Entry</button>
+      <button class="btn-secondary" id="clearBtn">Clear Form</button>
+      <span class="status-msg" id="statusMsg">Saved ✓</span>
+    </div>
+  </div>
+
+  <div class="history">
+    <div class="history-head">
+      <h2>Last 180 Days<span id="historySalesmanLabel"></span></h2>
+      <div class="actions">
+        <button class="btn-secondary" id="refreshBtn">↻ Refresh</button>
+        <button class="btn-secondary" id="printBtn">🖨 Print</button>
+        <button class="btn-secondary" id="csvBtn">⬇ Export CSV</button>
+      </div>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+          <tr><th>Date</th><th></th><th>MS Sale</th><th>HSD Sale</th><th>Total Sale</th><th>Cash</th><th>UPI</th><th>Credit</th><th>DT+</th><th>Other</th><th>Total Coll.</th><th>Hisab</th><th></th></tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+        <tfoot id="historyFoot"></tfoot>
+      </table>
+    </div>
+  </div>
+
+  <footer>Data is saved directly into your Google Sheet — one tab per salesman — and reachable from any device with this page's link.</footer>
+</div>
+
+<script>
+/* PASTE YOUR DEPLOYED APPS SCRIPT WEB APP URL HERE */
+const APPSSCRIPT_URL = "https://script.google.com/macros/s/AKfycbwWyZvsoQJg_QGiDvboKGCqnQURX7SahBYgpEYKr3Go7VIj9lHrj10xq_D0Z65yrHx5/exec";
+
+const PRODUCTS = ['MS','HSD'];
+const DENOMS = [500,200,100,50,20,10];
+let salesmen = [];
+let currentSalesman = '';
+let entries = [];
+let pollTimer = null;
+
+function fmt(n){ n = Number(n)||0; return '₹' + n.toLocaleString('en-IN',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function fmtDateDisplay(iso){ const [y,m,d]=iso.split('-'); const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; return d+' '+months[parseInt(m,10)-1]+' '+y; }
+
+/* ---------- API ---------- */
+async function apiGet(params){
+  const url = new URL(APPSSCRIPT_URL);
+  Object.entries(params).forEach(([k,v]) => url.searchParams.set(k, v));
+  const res = await fetch(url);
+  return res.json();
+}
+async function apiPost(body){
+  const res = await fetch(APPSSCRIPT_URL, { method:'POST', headers:{'Content-Type':'text/plain;charset=utf-8'}, body: JSON.stringify(body) });
+  return res.json();
+}
+
+/* ---------- Product cards ---------- */
+function buildProductCards(){
+  const grid = document.getElementById('productsGrid');
+  grid.innerHTML = PRODUCTS.map(p => `
+    <div class="product-card" data-product="${p}">
+      <div class="ptitle"><span>${p}</span><span>₹/L</span></div>
+      <div class="field-row">
+        <div class="field"><label>Initial Reading</label><input type="number" step="0.001" class="p-initial" placeholder="0.000"></div>
+        <div class="field"><label>Final Reading</label><input type="number" step="0.001" class="p-final" placeholder="0.000"></div>
+      </div>
+      <div class="field-row three">
+        <div class="field"><label>Price / Litre</label><input type="number" step="0.01" class="p-price" placeholder="0.00"></div>
+        <div class="field"><label>Test (Litres)</label><input type="number" step="0.001" class="p-test" placeholder="0.000"></div>
+        <div class="field"><label>Net Volume (L)</label><input type="text" class="p-volume" disabled></div>
+      </div>
+      <div class="subnote">Required Amount = (Final − Initial − Test) × Price</div>
+      <div class="product-total"><span>${p} Sale Amount</span><span class="p-total">₹0.00</span></div>
+    </div>`).join('');
+  grid.querySelectorAll('input').forEach(inp => inp.addEventListener('input', recalc));
+}
+
+/* ---------- Denomination grid ---------- */
+function buildDenomGrid(){
+  const grid = document.getElementById('denomGrid');
+  grid.innerHTML = DENOMS.map(d => `
+    <div class="denom-field">
+      <label>₹${d} notes</label>
+      <input type="number" min="0" step="1" class="denom-input" data-value="${d}" placeholder="0">
+    </div>`).join('') + `
+    <div class="denom-field">
+      <label>Coins (₹)</label>
+      <input type="number" min="0" step="0.01" id="coinsAmt" placeholder="0.00">
+    </div>`;
+  grid.querySelectorAll('.denom-input, #coinsAmt').forEach(inp => inp.addEventListener('input', recalc));
+}
+
+/* ---------- Gauge ---------- */
+function drawGauge(diff, scaleRef){
+  const svg = document.getElementById('gaugeSvg');
+  const scale = Math.max(Math.abs(scaleRef)*0.5, 500);
+  const pct = Math.max(-1, Math.min(1, diff/scale));
+  const angle = pct*80;
+  const rad = (angle-90)*Math.PI/180;
+  const cx=60, cy=60, r=40;
+  const nx = cx + r*Math.cos(rad), ny = cy + r*Math.sin(rad);
+  const color = diff < -0.5 ? '#AE3A2C' : diff > 0.5 ? '#2F6E4F' : '#A9781F';
+  svg.innerHTML = `
+    <path d="M 20 60 A 40 40 0 0 1 100 60" fill="none" stroke="#E4D3A6" stroke-width="8" stroke-linecap="round"/>
+    <path d="M 20 60 A 40 40 0 0 1 60 20" fill="none" stroke="#F6E4E1" stroke-width="8" stroke-linecap="round" opacity=".6"/>
+    <path d="M 60 20 A 40 40 0 0 1 100 60" fill="none" stroke="#E4F0E8" stroke-width="8" stroke-linecap="round" opacity=".6"/>
+    <line x1="${cx}" y1="${cy}" x2="${nx}" y2="${ny}" stroke="${color}" stroke-width="3.5" stroke-linecap="round"/>
+    <circle cx="${cx}" cy="${cy}" r="5" fill="${color}"/>`;
+  const caption = document.getElementById('gaugeCaption');
+  caption.textContent = diff < -0.5 ? 'Short' : diff > 0.5 ? 'Excess' : 'Balanced';
+  caption.style.color = color;
+}
+
+function cashTotalFromInputs(){
+  let total = 0;
+  document.querySelectorAll('.denom-input').forEach(inp => { total += (parseFloat(inp.value)||0) * Number(inp.dataset.value); });
+  total += parseFloat(document.getElementById('coinsAmt').value) || 0;
+  return total;
+}
+
+/* ---------- Recalc ---------- */
+function recalc(){
+  let totalSale = 0;
+  PRODUCTS.forEach(p => {
+    const card = document.querySelector(`.product-card[data-product="${p}"]`);
+    const init = parseFloat(card.querySelector('.p-initial').value) || 0;
+    const fin = parseFloat(card.querySelector('.p-final').value) || 0;
+    const price = parseFloat(card.querySelector('.p-price').value) || 0;
+    const test = parseFloat(card.querySelector('.p-test').value) || 0;
+    const netVol = (fin - init) - test;
+    const total = netVol * price;
+    card.querySelector('.p-final').classList.toggle('err', fin && init && (fin-init) < 0);
+    card.querySelector('.p-volume').value = netVol.toFixed(3);
+    card.querySelector('.p-total').textContent = fmt(total);
+    totalSale += total;
+  });
+
+  const cashTotal = cashTotalFromInputs();
+  document.getElementById('cashTotal').textContent = fmt(cashTotal);
+
+  const upiInit = parseFloat(document.getElementById('upiInitial').value) || 0;
+  const upiFin = parseFloat(document.getElementById('upiFinal').value) || 0;
+  const upiAmt = upiFin - upiInit;
+  document.getElementById('upiFinal').classList.toggle('err', upiFin && upiInit && upiAmt < 0);
+  document.getElementById('upiAmt').textContent = fmt(upiAmt);
+
+  const credit = parseFloat(document.getElementById('creditAmt').value) || 0;
+  const dtplus = parseFloat(document.getElementById('dtPlusAmt').value) || 0;
+  const other = parseFloat(document.getElementById('otherAmt').value) || 0;
+
+  const totalCollection = cashTotal + upiAmt + credit + dtplus + other;
+  const diff = totalCollection - totalSale; // Collection - Sale, per spec
+
+  document.getElementById('sumSale').textContent = fmt(totalSale);
+  document.getElementById('sumCollection').textContent = fmt(totalCollection);
+  const diffEl = document.getElementById('sumDiff');
+  diffEl.textContent = fmt(diff);
+  diffEl.className = 'val ' + (diff < -0.5 ? 'short' : diff > 0.5 ? 'excess' : '');
+  drawGauge(diff, totalSale);
+}
+
+/* ---------- Form <-> entry ---------- */
+function getFormEntry(){
+  const date = document.getElementById('entryDate').value || todayStr();
+  const products = {};
+  PRODUCTS.forEach(p=>{
+    const card = document.querySelector(`.product-card[data-product="${p}"]`);
+    products[p] = {
+      initial: parseFloat(card.querySelector('.p-initial').value) || 0,
+      final: parseFloat(card.querySelector('.p-final').value) || 0,
+      price: parseFloat(card.querySelector('.p-price').value) || 0,
+      test: parseFloat(card.querySelector('.p-test').value) || 0,
+    };
+  });
+  const cash = {};
+  document.querySelectorAll('.denom-input').forEach(inp => { cash['n'+inp.dataset.value] = parseFloat(inp.value) || 0; });
+  cash.coins = parseFloat(document.getElementById('coinsAmt').value) || 0;
+  return {
+    date, products,
+    upi: { initial: parseFloat(document.getElementById('upiInitial').value)||0, final: parseFloat(document.getElementById('upiFinal').value)||0 },
+    cash,
+    credit: parseFloat(document.getElementById('creditAmt').value)||0,
+    dtplus: parseFloat(document.getElementById('dtPlusAmt').value)||0,
+    other: parseFloat(document.getElementById('otherAmt').value)||0,
+  };
+}
+function cashTotalFromEntry(e){
+  let t = 0; DENOMS.forEach(d => t += (e.cash['n'+d]||0) * d); t += e.cash.coins||0; return t;
+}
+function computeEntryTotals(e){
+  let totalSale = 0; const perProduct = {};
+  PRODUCTS.forEach(p=>{
+    const d = e.products[p] || {initial:0,final:0,price:0,test:0};
+    const sale = ((d.final||0)-(d.initial||0)-(d.test||0)) * (d.price||0);
+    perProduct[p]=sale; totalSale+=sale;
+  });
+  const cashTotal = cashTotalFromEntry(e);
+  const upiAmt = (e.upi.final||0)-(e.upi.initial||0);
+  const totalCollection = cashTotal + upiAmt + (e.credit||0) + (e.dtplus||0) + (e.other||0);
+  return {perProduct, totalSale, cashTotal, upiAmt, totalCollection, diff: totalCollection - totalSale};
+}
+function fillForm(e){
+  document.getElementById('entryDate').value = e.date;
+  PRODUCTS.forEach(p=>{
+    const card = document.querySelector(`.product-card[data-product="${p}"]`);
+    const d = e.products[p] || {initial:0,final:0,price:0,test:0};
+    card.querySelector('.p-initial').value = d.initial || '';
+    card.querySelector('.p-final').value = d.final || '';
+    card.querySelector('.p-price').value = d.price || '';
+    card.querySelector('.p-test').value = d.test || '';
+  });
+  document.querySelectorAll('.denom-input').forEach(inp => { inp.value = e.cash['n'+inp.dataset.value] || ''; });
+  document.getElementById('coinsAmt').value = e.cash.coins || '';
+  document.getElementById('upiInitial').value = e.upi.initial || '';
+  document.getElementById('upiFinal').value = e.upi.final || '';
+  document.getElementById('creditAmt').value = e.credit || '';
+  document.getElementById('dtPlusAmt').value = e.dtplus || '';
+  document.getElementById('otherAmt').value = e.other || '';
+  recalc();
+}
+function clearForm(prefillCarryOver){
+  document.getElementById('entryDate').value = todayStr();
+  PRODUCTS.forEach(p=>{
+    const card = document.querySelector(`.product-card[data-product="${p}"]`);
+    card.querySelector('.p-initial').value=''; card.querySelector('.p-final').value='';
+    card.querySelector('.p-price').value=''; card.querySelector('.p-test').value='';
+  });
+  document.querySelectorAll('.denom-input').forEach(inp => inp.value = '');
+  document.getElementById('coinsAmt').value = '';
+  document.getElementById('upiInitial').value=''; document.getElementById('upiFinal').value='';
+  document.getElementById('creditAmt').value=''; document.getElementById('dtPlusAmt').value=''; document.getElementById('otherAmt').value='';
+  if(prefillCarryOver && entries.length){
+    const latest = entries[0];
+    PRODUCTS.forEach(p=>{
+      const card = document.querySelector(`.product-card[data-product="${p}"]`);
+      const d = latest.products[p];
+      if(d){ card.querySelector('.p-initial').value = d.final||''; card.querySelector('.p-price').value = d.price||''; }
+    });
+    document.getElementById('upiInitial').value = latest.upi.final || '';
+  }
+  recalc();
+}
+
+/* ---------- History ---------- */
+function renderHistory(){
+  const body = document.getElementById('historyBody');
+  if(!currentSalesman){ body.innerHTML = `<tr class="empty-row"><td colspan="13">Add or select a salesman above.</td></tr>`; document.getElementById('historyFoot').innerHTML=''; return; }
+  if(!entries.length){ body.innerHTML = `<tr class="empty-row"><td colspan="13">No entries yet for this salesman.</td></tr>`; document.getElementById('historyFoot').innerHTML=''; return; }
+  body.innerHTML = entries.map(e=>{
+    const t = computeEntryTotals(e);
+    const pillClass = t.diff < -0.5 ? 'short' : t.diff > 0.5 ? 'excess' : 'zero';
+    const pillLabel = t.diff < -0.5 ? 'Short' : t.diff > 0.5 ? 'Excess' : 'OK';
+    return `<tr>
+      <td>${fmtDateDisplay(e.date)}</td><td></td>
+      <td>${fmt(t.perProduct.MS)}</td><td>${fmt(t.perProduct.HSD)}</td><td>${fmt(t.totalSale)}</td>
+      <td>${fmt(t.cashTotal)}</td><td>${fmt(t.upiAmt)}</td><td>${fmt(e.credit)}</td><td>${fmt(e.dtplus)}</td><td>${fmt(e.other)}</td>
+      <td>${fmt(t.totalCollection)}</td>
+      <td><span class="pill ${pillClass}">${pillLabel} ${fmt(Math.abs(t.diff))}</span></td>
+      <td><div class="row-actions">
+        <button class="icon-btn" title="Edit" onclick="editEntry('${e.date}')">✎</button>
+        <button class="icon-btn" title="Delete" onclick="deleteEntryRow('${e.date}')">🗑</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+  renderFooterTotals();
+}
+
+function renderFooterTotals(){
+  const foot = document.getElementById('historyFoot');
+  if(!entries.length){ foot.innerHTML = ''; return; }
+  const sums = entries.reduce((acc,e)=>{
+    const t = computeEntryTotals(e);
+    acc.ms += t.perProduct.MS; acc.hsd += t.perProduct.HSD; acc.sale += t.totalSale;
+    acc.cash += t.cashTotal; acc.upi += t.upiAmt; acc.credit += (e.credit||0);
+    acc.dtplus += (e.dtplus||0); acc.other += (e.other||0); acc.collection += t.totalCollection;
+    return acc;
+  }, {ms:0,hsd:0,sale:0,cash:0,upi:0,credit:0,dtplus:0,other:0,collection:0});
+  const diff = sums.collection - sums.sale;
+  const pillClass = diff < -0.5 ? 'short' : diff > 0.5 ? 'excess' : 'zero';
+  const pillLabel = diff < -0.5 ? 'Short' : diff > 0.5 ? 'Excess' : 'OK';
+  foot.innerHTML = `<tr>
+    <td>TOTAL (${entries.length} days)</td><td></td>
+    <td>${fmt(sums.ms)}</td><td>${fmt(sums.hsd)}</td><td>${fmt(sums.sale)}</td>
+    <td>${fmt(sums.cash)}</td><td>${fmt(sums.upi)}</td><td>${fmt(sums.credit)}</td><td>${fmt(sums.dtplus)}</td><td>${fmt(sums.other)}</td>
+    <td>${fmt(sums.collection)}</td>
+    <td><span class="pill ${pillClass}">${pillLabel} ${fmt(Math.abs(diff))}</span></td>
+    <td></td>
+  </tr>`;
+}
+window.editEntry = function(date){ const e = entries.find(x=>x.date===date); if(e) fillForm(e); window.scrollTo({top:0,behavior:'smooth'}); };
+window.deleteEntryRow = async function(date){
+  if(!confirm('Delete the hisab entry for '+fmtDateDisplay(date)+'?')) return;
+  await apiPost({action:'deleteEntry', salesman: currentSalesman, date});
+  await loadEntries();
+};
+
+/* ---------- Data loading ---------- */
+async function loadSalesmen(){
+  try{
+    salesmen = await apiGet({action:'salesmen'});
+    setLive(true);
+  }catch(err){ console.error(err); setLive(false); return; }
+  const sel = document.getElementById('salesmanSelect');
+  sel.innerHTML = salesmen.length ? salesmen.map(n=>`<option value="${n}">${n}</option>`).join('') : `<option value="">No salesmen yet</option>`;
+  if(salesmen.length){
+    if(!salesmen.includes(currentSalesman)) currentSalesman = salesmen[0];
+    sel.value = currentSalesman;
+    document.getElementById('historySalesmanLabel').textContent = ' — ' + currentSalesman;
+    await loadEntries();
+  } else {
+    currentSalesman = '';
+    renderHistory();
+  }
+}
+async function refreshHistoryOnly(){
+  if(!currentSalesman) return;
+  try{
+    entries = await apiGet({action:'entries', salesman: currentSalesman});
+    setLive(true);
+  }catch(err){ console.error(err); setLive(false); return; }
+  renderHistory();
+}
+async function loadEntries(){
+  if(!currentSalesman) return;
+  try{
+    entries = await apiGet({action:'entries', salesman: currentSalesman});
+    setLive(true);
+  }catch(err){ console.error(err); setLive(false); return; }
+  renderHistory();
+  const today = todayStr();
+  if(document.getElementById('entryDate').value === today){
+    const todaysEntry = entries.find(x=>x.date===today);
+    if(todaysEntry) fillForm(todaysEntry); else clearForm(true);
+  }
+}
+async function saveEntry(){
+  if(!currentSalesman){ alert('Add or select a salesman first.'); return; }
+  const e = getFormEntry();
+  try{
+    await apiPost({action:'saveEntry', salesman: currentSalesman, entry: e});
+    fillForm(e); // trust what was just typed/saved — never wipe it based on a re-fetch
+    await refreshHistoryOnly();
+    const msg = document.getElementById('statusMsg');
+    msg.classList.add('show'); setTimeout(()=>msg.classList.remove('show'),1800);
+  }catch(err){ console.error(err); alert('Save failed — check your connection / Apps Script deployment.'); }
+}
+async function addSalesman(){
+  const name = prompt('Salesman name:');
+  if(!name || !name.trim()) return;
+  try{
+    await apiPost({action:'addSalesman', name: name.trim()});
+    currentSalesman = name.trim();
+    await loadSalesmen();
+  }catch(err){ console.error(err); alert('Could not add salesman.'); }
+}
+
+/* ---------- CSV / print ---------- */
+function exportCsv(){
+  const headers = ['Date','MS Sale','HSD Sale','Total Sale','Cash','UPI','Credit','DT Plus','Other','Total Collection','Difference'];
+  const rows = entries.map(e=>{ const t = computeEntryTotals(e);
+    return [e.date, t.perProduct.MS.toFixed(2), t.perProduct.HSD.toFixed(2), t.totalSale.toFixed(2), t.cashTotal.toFixed(2), t.upiAmt.toFixed(2), (e.credit||0).toFixed(2), (e.dtplus||0).toFixed(2), (e.other||0).toFixed(2), t.totalCollection.toFixed(2), t.diff.toFixed(2)];
+  });
+  const csv = [headers, ...rows].map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `hisab-${(currentSalesman||'salesman').replace(/\s+/g,'_')}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+function setLive(on){
+  document.getElementById('liveDot').className = 'live-dot ' + (on ? 'on':'off');
+  document.getElementById('liveLabel').textContent = on ? 'Connected' : 'Connection issue';
+}
+
+/* ---------- Init ---------- */
+function init(){
+  buildProductCards();
+  buildDenomGrid();
+  document.getElementById('entryDate').value = todayStr();
+  recalc();
+
+  if(!APPSSCRIPT_URL || APPSSCRIPT_URL === 'PASTE_APPS_SCRIPT_URL_HERE'){
+    document.getElementById('configWarning').style.display = 'block';
+    setLive(false);
+    return;
+  }
+
+  loadSalesmen();
+  pollTimer = setInterval(refreshHistoryOnly, 20000); // light polling so other devices' changes show up
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) refreshHistoryOnly(); });
+
+  ['upiInitial','upiFinal','creditAmt','dtPlusAmt','otherAmt'].forEach(id=>{
+    document.getElementById(id).addEventListener('input', recalc);
+  });
+
+  document.getElementById('saveBtn').addEventListener('click', saveEntry);
+  document.getElementById('clearBtn').addEventListener('click', ()=>clearForm(false));
+  document.getElementById('refreshBtn').addEventListener('click', loadEntries);
+  document.getElementById('printBtn').addEventListener('click', ()=>window.print());
+  document.getElementById('csvBtn').addEventListener('click', exportCsv);
+  document.getElementById('addSalesmanBtn').addEventListener('click', addSalesman);
+  document.getElementById('salesmanSelect').addEventListener('change', (ev)=>{
+    currentSalesman = ev.target.value;
+    document.getElementById('historySalesmanLabel').textContent = currentSalesman ? ' — ' + currentSalesman : '';
+    loadEntries();
+  });
+  document.getElementById('entryDate').addEventListener('change', (ev)=>{
+    const e = entries.find(x=>x.date===ev.target.value);
+    if(e) fillForm(e); else clearForm(false);
+  });
+}
+init();
+</script>
+</body>
+</html>
