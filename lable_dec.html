@@ -2,204 +2,263 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Tank Lorry Sample Label Generator</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tank Lorry Sample Label — Auto Filler</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
-    --bg: #14181C;
-    --panel: #1B2126;
-    --panel-2: #222A31;
-    --line: #323C44;
-    --amber: #F2A93C;
-    --diesel: #6FA383;
-    --text: #E8E6E0;
-    --muted: #8B93A0;
-    --danger: #E06B5C;
+    --navy: #0f2b3d;
+    --steel-actual: #274b5e;
+    --paper: #f3efe6;
+    --amber: #d98e2b;
+    --amber-dark: #b6721a;
+    --ink: #16242c;
+    --line: #c9c0ad;
+    --ok: #3a7d5c;
+    --err: #b2422f;
+    --mono: 'Courier New', Courier, monospace;
   }
   *{box-sizing:border-box;}
   body{
     margin:0;
-    background:
-      repeating-linear-gradient(135deg, rgba(255,255,255,0.015) 0 2px, transparent 2px 40px),
-      var(--bg);
-    color:var(--text);
-    font-family:'IBM Plex Mono', monospace;
+    background:var(--navy);
+    background-image:
+      linear-gradient(160deg, #0f2b3d 0%, #123344 55%, #0c2431 100%);
+    color:var(--ink);
+    font-family: Georgia, 'Times New Roman', serif;
     min-height:100vh;
-    padding:32px 20px 60px;
   }
-  .wrap{max-width:760px;margin:0 auto;}
-  header{margin-bottom:32px;border-bottom:1px solid var(--line);padding-bottom:20px;}
-  .eyebrow{
-    font-size:11px;letter-spacing:.18em;color:var(--amber);text-transform:uppercase;margin-bottom:8px;
-    display:flex;align-items:center;gap:8px;
-  }
-  .eyebrow::before{content:"";width:18px;height:2px;background:var(--amber);display:inline-block;}
-  h1{
-    font-family:'Oswald',sans-serif;font-weight:700;font-size:30px;letter-spacing:.01em;
-    margin:0 0 6px;text-transform:uppercase;
-  }
-  .sub{color:var(--muted);font-size:13.5px;line-height:1.5;max-width:56ch;}
+  .wrap{max-width:980px;margin:0 auto;padding:36px 20px 80px;}
 
-  .stage{
-    display:flex;align-items:center;gap:0;margin:26px 0 36px;
+  header.top{
+    display:flex;align-items:center;gap:16px;
+    margin-bottom:28px;
   }
-  .stage .step{
-    flex:1;text-align:center;position:relative;
+  .badge{
+    width:46px;height:46px;border-radius:6px;
+    background:var(--amber);
+    display:flex;align-items:center;justify-content:center;
+    font-family: Arial, sans-serif; font-weight:800; color:var(--navy); font-size:18px;
+    flex-shrink:0;
+    box-shadow: 0 2px 0 var(--amber-dark);
   }
-  .stage .step .dot{
-    width:26px;height:26px;border-radius:50%;border:2px solid var(--line);
-    display:flex;align-items:center;justify-content:center;margin:0 auto 6px;
-    font-family:'Oswald',sans-serif;font-size:12px;font-weight:600;color:var(--muted);
-    background:var(--panel);position:relative;z-index:1;
+  header.top h1{
+    color:var(--paper);
+    font-size:23px;
+    letter-spacing:0.3px;
+    margin:0;
+    font-weight:400;
   }
-  .stage .step.active .dot{border-color:var(--amber);color:var(--amber);}
-  .stage .step.done .dot{border-color:var(--diesel);color:var(--diesel);background:rgba(111,163,131,0.12);}
-  .stage .step .lbl{font-size:10.5px;letter-spacing:.06em;color:var(--muted);text-transform:uppercase;}
-  .stage .step.active .lbl{color:var(--text);}
-  .stage .bar{position:absolute;top:13px;left:-50%;width:100%;height:2px;background:var(--line);z-index:0;}
-  .stage .step:first-child .bar{display:none;}
+  header.top p{
+    color:#9db4c2;
+    margin:4px 0 0;
+    font-size:13.5px;
+    font-family: Arial, sans-serif;
+  }
 
-  section{
-    background:var(--panel);border:1px solid var(--line);border-radius:2px;
-    padding:22px 22px 24px;margin-bottom:18px;
+  .card{
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:26px 28px;
+    margin-bottom:22px;
+    box-shadow: 0 12px 30px rgba(0,0,0,0.28);
   }
-  section h2{
-    font-family:'Oswald',sans-serif;font-size:13px;letter-spacing:.1em;text-transform:uppercase;
-    color:var(--amber);margin:0 0 4px;font-weight:600;
+  .card h2{
+    font-size:15px;
+    text-transform:uppercase;
+    letter-spacing:1.2px;
+    color:var(--navy);
+    margin:0 0 4px;
+    font-family:Arial, sans-serif;
+    font-weight:700;
+    display:flex; align-items:center; gap:10px;
   }
-  section p.hint{color:var(--muted);font-size:12.5px;margin:0 0 16px;line-height:1.5;}
+  .card h2 .num{
+    display:inline-flex; align-items:center;justify-content:center;
+    width:22px;height:22px;border-radius:50%;
+    background:var(--navy); color:var(--paper);
+    font-size:12px; font-family:Arial, sans-serif;
+  }
+  .card .sub{
+    font-family: Arial, sans-serif;
+    font-size:12.5px; color:#6b6552; margin:0 0 18px; padding-left:32px;
+  }
 
   #dropzone{
-    border:1.5px dashed var(--line);border-radius:2px;padding:28px 16px;text-align:center;
-    cursor:pointer;transition:border-color .15s, background .15s;
+    border:2px dashed #a89f88;
+    border-radius:4px;
+    padding:34px 20px;
+    text-align:center;
+    font-family:Arial, sans-serif;
+    color:#5a5646;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
   }
-  #dropzone:hover, #dropzone.drag{border-color:var(--amber);background:rgba(242,169,60,0.05);}
-  #dropzone .icon{font-size:22px;margin-bottom:8px;color:var(--muted);}
-  #dropzone .main{font-size:13.5px;}
-  #dropzone .main b{color:var(--amber);}
-  #dropzone .fname{margin-top:10px;font-size:12.5px;color:var(--diesel);}
-  input[type=file]{display:none;}
+  #dropzone:hover, #dropzone.drag{
+    border-color:var(--amber-dark);
+    background:#ece5d3;
+  }
+  #dropzone strong{color:var(--navy);}
+  #fileInput{display:none;}
+  #fileMeta{
+    font-family:Arial, sans-serif; font-size:13px; color:var(--navy);
+    margin-top:12px; display:none;
+  }
+  #fileMeta.show{display:block;}
 
-  .field{margin-bottom:16px;}
-  .field:last-child{margin-bottom:0;}
+  .status{
+    font-family:Arial, sans-serif; font-size:13px; margin-top:14px;
+    display:none; padding:10px 12px; border-radius:3px;
+  }
+  .status.show{display:block;}
+  .status.busy{background:#e4e0d1; color:var(--navy);}
+  .status.ok{background:#dcece2; color:var(--ok);}
+  .status.err{background:#f3ddd7; color:var(--err);}
+
+  .fields{display:grid; grid-template-columns: 1fr 1fr; gap:16px 20px;}
+  .field{display:flex; flex-direction:column; gap:6px;}
+  .field.full{grid-column: 1 / -1;}
   .field label{
-    display:block;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;
+    font-family:Arial, sans-serif; font-size:11.5px; text-transform:uppercase;
+    letter-spacing:0.6px; color:#6b6552; display:flex; justify-content:space-between;
   }
-  .field .row{display:flex;gap:10px;}
-  input[type=text], select{
-    width:100%;background:var(--panel-2);border:1px solid var(--line);color:var(--text);
-    padding:10px 12px;font-family:'IBM Plex Mono',monospace;font-size:14px;border-radius:2px;
-    outline:none;transition:border-color .15s;
+  .field label .tag{
+    font-size:10px; padding:1px 6px; border-radius:8px;
+    background:#e4e0d1; color:#7a7355; text-transform:none; letter-spacing:0;
   }
-  input[type=text]:focus, select:focus{border-color:var(--amber);}
-  .badge{
-    display:inline-block;font-size:10px;letter-spacing:.05em;text-transform:uppercase;
-    padding:2px 7px;border-radius:2px;margin-left:8px;vertical-align:middle;
+  .field label .tag.found{background:#dcece2; color:var(--ok);}
+  .field input, .field select{
+    font-family:var(--mono);
+    font-size:15px;
+    padding:9px 10px;
+    border:1px solid var(--line);
+    border-radius:2px;
+    background:#fffdf8;
+    color:var(--ink);
   }
-  .badge.auto{background:rgba(111,163,131,0.15);color:var(--diesel);border:1px solid rgba(111,163,131,0.4);}
-  .badge.manual{background:rgba(224,107,92,0.12);color:var(--danger);border:1px solid rgba(224,107,92,0.35);}
+  .field input:focus, .field select:focus{outline:2px solid var(--amber); outline-offset:0;}
 
-  .tank-note{font-size:12px;color:var(--muted);margin-top:6px;}
+  .radio-row{display:flex; gap:10px; font-family:Arial,sans-serif; font-size:13.5px;}
+  .radio-row label{
+    display:flex; align-items:center; gap:6px;
+    border:1px solid var(--line); padding:8px 12px; border-radius:2px; cursor:pointer;
+    background:#fffdf8;
+  }
+  .radio-row input{margin:0;}
+  .radio-row label.active{border-color:var(--amber-dark); background:#f6e8d0;}
 
+  .actions{display:flex; gap:12px; margin-top:6px; flex-wrap:wrap;}
   button.primary{
-    width:100%;background:var(--amber);color:#1A1200;border:none;padding:14px;
-    font-family:'Oswald',sans-serif;font-weight:600;letter-spacing:.05em;text-transform:uppercase;
-    font-size:14px;border-radius:2px;cursor:pointer;transition:filter .15s;
+    font-family:Arial, sans-serif; font-weight:700; font-size:14px;
+    background:var(--amber); color:var(--navy); border:none;
+    padding:13px 26px; border-radius:3px; cursor:pointer;
+    box-shadow: 0 2px 0 var(--amber-dark);
   }
-  button.primary:hover{filter:brightness(1.08);}
-  button.primary:disabled{background:var(--line);color:var(--muted);cursor:not-allowed;}
+  button.primary:disabled{background:#cfc6ab; color:#8b8468; box-shadow:none; cursor:not-allowed;}
+  button.primary:active:not(:disabled){transform:translateY(1px); box-shadow:none;}
   button.ghost{
-    width:100%;background:transparent;color:var(--text);border:1px solid var(--line);padding:12px;
-    font-family:'IBM Plex Mono',monospace;font-size:13px;border-radius:2px;cursor:pointer;margin-top:10px;
+    font-family:Arial, sans-serif; font-size:13px;
+    background:transparent; color:var(--navy); border:1px solid var(--line);
+    padding:12px 18px; border-radius:3px; cursor:pointer;
   }
-  button.ghost:hover{border-color:var(--amber);}
 
-  #status{font-size:12.5px;color:var(--muted);margin-top:10px;min-height:16px;}
-  #status.err{color:var(--danger);}
-  #status.ok{color:var(--diesel);}
+  .footnote{
+    font-family:Arial, sans-serif; font-size:12px; color:#8b96a3;
+    text-align:center; margin-top:10px;
+  }
 
-  footer{text-align:center;color:var(--muted);font-size:11px;margin-top:30px;letter-spacing:.03em;}
+  .layout-toggle{
+    display:flex; gap:8px; margin-bottom:18px; font-family:Arial,sans-serif; font-size:13px;
+  }
+  .layout-toggle label{
+    display:flex; align-items:center; gap:6px; border:1px solid var(--line);
+    padding:8px 12px; border-radius:2px; cursor:pointer; background:#fffdf8;
+  }
+  .layout-toggle input{margin:0;}
+
+  @media (max-width:640px){
+    .fields{grid-template-columns:1fr;}
+  }
 </style>
 </head>
 <body>
 <div class="wrap">
 
-  <header>
-    <div class="eyebrow">Depot Tools</div>
-    <h1>Tank Lorry Sample Label Generator</h1>
-    <p class="sub">Upload the HPCL billing invoice PDF. The tool reads the lorry number, invoice number, product and transporter, then produces a printable retention-sample label PDF (4 up, matching the standard depot format).</p>
+  <header class="top">
+    <div class="badge">HP</div>
+    <div>
+      <h1>Tank Lorry Sample Label — Auto Filler</h1>
+      <p>Upload the HPCL billing document (PDF). It pulls the lorry number, invoice number, tank, and transporter — you check them, then download the filled label as a PDF.</p>
+    </div>
   </header>
 
-  <div class="stage">
-    <div class="step active" id="s1"><div class="dot">1</div><div class="lbl">Upload</div></div>
-    <div class="step" id="s2"><div class="bar"></div><div class="dot">2</div><div class="lbl">Review</div></div>
-    <div class="step" id="s3"><div class="bar"></div><div class="dot">3</div><div class="lbl">Generate</div></div>
-  </div>
+  <div class="card">
+    <h2><span class="num">1</span> Upload billing document</h2>
+    <p class="sub">PDF only. Nothing leaves your browser — parsing happens locally.</p>
 
-  <section>
-    <h2>Step 1 — Invoice</h2>
-    <p class="hint">PDF only. Nothing leaves your browser — extraction and PDF generation both happen locally.</p>
     <div id="dropzone">
-      <div class="icon">&#8593;</div>
-      <div class="main"><b>Click to upload</b> or drop the invoice PDF here</div>
-      <div class="fname" id="fname"></div>
+      <div><strong>Click to choose a PDF</strong> or drag it here</div>
+      <div id="fileMeta"></div>
     </div>
     <input type="file" id="fileInput" accept="application/pdf">
-    <div id="status"></div>
-  </section>
+    <div class="status" id="status"></div>
+  </div>
 
-  <section id="reviewSection" style="display:none;">
-    <h2>Step 2 — Review extracted fields</h2>
-    <p class="hint">Auto-detected values are marked <span class="badge auto">auto</span>. Check them against the invoice and correct anything that's off before generating.</p>
+  <div class="card" id="reviewCard" style="display:none;">
+    <h2><span class="num">2</span> Check the extracted details</h2>
+    <p class="sub">Auto-filled where found — edit anything that looks off before generating the label.</p>
+    <div class="fields">
+      <div class="field">
+        <label>Tank Lorry / Truck No. <span class="tag" id="tag-vehicle">not found</span></label>
+        <input id="f-vehicle" placeholder="e.g. MP17HH4923">
+      </div>
+      <div class="field">
+        <label>Invoice No. <span class="tag" id="tag-invoice">not found</span></label>
+        <input id="f-invoice" placeholder="e.g. 9023905377">
+      </div>
+      <div class="field">
+        <label>Transporter's Name <span class="tag" id="tag-transporter">not found</span></label>
+        <input id="f-transporter" placeholder="e.g. MADHUSUDAN">
+      </div>
+      <div class="field">
+        <label>Product / RO Tank <span class="tag" id="tag-product">not found</span></label>
+        <div class="radio-row" id="productRow">
+          <label id="lbl-ms"><input type="radio" name="product" value="MS"> MS → Tank 1</label>
+          <label id="lbl-hsd"><input type="radio" name="product" value="HSD"> HSD → Tank 2</label>
+        </div>
+      </div>
+    </div>
+  </div>
 
-    <div class="field">
-      <label>Lorry / Vehicle Number <span id="badge-vehicle"></span></label>
-      <input type="text" id="vehicleNo" placeholder="e.g. MP17HH4923">
+  <div class="card" id="generateCard" style="display:none;">
+    <h2><span class="num">3</span> Generate the label PDF</h2>
+    <p class="sub">Only these four fields are filled in. Everything else on the label (density, seal numbers, signatures, date) stays blank for manual entry, same as the original form.</p>
+
+    <div class="layout-toggle">
+      <label id="layout-4-label"><input type="radio" name="layout" value="4" checked> 4 copies per page (matches original label sheet)</label>
+      <label id="layout-1-label"><input type="radio" name="layout" value="1"> 1 copy per page</label>
     </div>
 
-    <div class="field">
-      <label>Invoice Number <span id="badge-invoice"></span></label>
-      <input type="text" id="invoiceNo" placeholder="e.g. 9023905377">
+    <div class="actions">
+      <button class="primary" id="genBtn">Download filled label (PDF)</button>
+      <button class="ghost" id="resetBtn">Start over</button>
     </div>
+    <div class="footnote">Generates: SUPPLY LOCATION JABALPUR · REGION REWA · M/s VIBHA FILLING STATION, Rajapur (Teonthar)</div>
+  </div>
 
-    <div class="field">
-      <label>Product <span id="badge-product"></span></label>
-      <select id="product">
-        <option value="MS">MS &mdash; RO Tank No. 1</option>
-        <option value="HSD">HSD &mdash; RO Tank No. 2</option>
-      </select>
-      <div class="tank-note">RO Tank No. is set automatically from the product: MS &rarr; Tank 1, HSD &rarr; Tank 2.</div>
-    </div>
-
-    <div class="field">
-      <label>Transporter / Carrier Name <span id="badge-transporter"></span></label>
-      <input type="text" id="transporterName" placeholder="e.g. MADHUSUDAN">
-    </div>
-  </section>
-
-  <section id="generateSection" style="display:none;">
-    <h2>Step 3 — Generate</h2>
-    <p class="hint">Creates one page with 4 retention-sample labels, filled with the values above.</p>
-    <button class="primary" id="genBtn">Generate Label PDF</button>
-    <button class="ghost" id="resetBtn">Start over with a new invoice</button>
-  </section>
-
-  <footer>Runs entirely client-side. Re-open this file any time — no server, no upload required.</footer>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 const dropzone = document.getElementById('dropzone');
 const fileInput = document.getElementById('fileInput');
-const fnameEl = document.getElementById('fname');
+const fileMeta = document.getElementById('fileMeta');
 const statusEl = document.getElementById('status');
-const reviewSection = document.getElementById('reviewSection');
-const generateSection = document.getElementById('generateSection');
+const reviewCard = document.getElementById('reviewCard');
+const generateCard = document.getElementById('generateCard');
 
 dropzone.addEventListener('click', () => fileInput.click());
 dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
@@ -208,238 +267,261 @@ dropzone.addEventListener('drop', e => {
   e.preventDefault(); dropzone.classList.remove('drag');
   if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
 });
-fileInput.addEventListener('change', e => { if (e.target.files.length) handleFile(e.target.files[0]); });
+fileInput.addEventListener('change', e => {
+  if (e.target.files.length) handleFile(e.target.files[0]);
+});
 
-function setStage(n){
-  for (const i of [1,2,3]){
-    const el = document.getElementById('s'+i);
-    el.classList.remove('active','done');
-    if (i < n) el.classList.add('done');
-    if (i === n) el.classList.add('active');
-  }
-}
-
-function setStatus(msg, type){
+function setStatus(msg, kind){
   statusEl.textContent = msg;
-  statusEl.className = type || '';
+  statusEl.className = 'status show ' + kind;
 }
 
 async function handleFile(file){
-  if (file.type !== 'application/pdf'){
+  if (file.type !== 'application/pdf' && !file.name.toLowerCase().endsWith('.pdf')) {
     setStatus('Please upload a PDF file.', 'err');
     return;
   }
-  fnameEl.textContent = file.name;
-  setStatus('Reading invoice…');
-  try{
+  fileMeta.textContent = '📄 ' + file.name;
+  fileMeta.classList.add('show');
+  setStatus('Reading document…', 'busy');
+  reviewCard.style.display = 'none';
+  generateCard.style.display = 'none';
+
+  try {
     const buf = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+    const pdf = await pdfjsLib.getDocument({ data: buf }).promise;
     let fullText = '';
-    for (let p = 1; p <= pdf.numPages; p++){
-      const page = await pdf.getPage(p);
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
       const content = await page.getTextContent();
-      fullText += content.items.map(it => it.str).join(' ') + ' ';
+      const items = content.items
+        .filter(it => it.str && it.str.trim().length)
+        .map(it => ({ str: it.str, x: it.transform[4], y: it.transform[5] }));
+      items.sort((a, b) => {
+        if (Math.abs(a.y - b.y) > 2.5) return b.y - a.y; // top to bottom
+        return a.x - b.x; // left to right within the same row
+      });
+      let lines = [];
+      let currentLine = [];
+      let lastY = null;
+      for (const it of items) {
+        if (lastY !== null && Math.abs(it.y - lastY) > 2.5) {
+          lines.push(currentLine.join(' '));
+          currentLine = [];
+        }
+        currentLine.push(it.str);
+        lastY = it.y;
+      }
+      if (currentLine.length) lines.push(currentLine.join(' '));
+      fullText += lines.join('\n') + '\n';
     }
-    const fields = extractFields(fullText);
-    populateReview(fields);
-    setStatus('Extraction complete. Review the fields below.', 'ok');
-    reviewSection.style.display = 'block';
-    generateSection.style.display = 'block';
-    setStage(2);
-    reviewSection.scrollIntoView({behavior:'smooth', block:'start'});
-  }catch(err){
+    extractFields(fullText);
+    setStatus('Document read. Review the fields below.', 'ok');
+    reviewCard.style.display = 'block';
+    generateCard.style.display = 'block';
+  } catch (err) {
     console.error(err);
-    setStatus('Could not read that PDF. You can still fill fields in manually below.', 'err');
-    populateReview({});
-    reviewSection.style.display = 'block';
-    generateSection.style.display = 'block';
-    setStage(2);
+    setStatus('Could not read that PDF. Try re-saving/exporting it and upload again, or fill the fields in manually below.', 'err');
+    reviewCard.style.display = 'block';
+    generateCard.style.display = 'block';
   }
 }
 
-const STOPWORDS = new Set([
-  'CARRIER','NAME','VEHICLE','INVOICE','NO','ORDER','DATE','LOAD','MODE','PAN','TIN','VAT',
-  'GST','GSTAX','LOC','CODE','SOLD','SHIP','TO','HPC','DEALER','STATION','FILLING','JABALPUR',
-  'DEPOT','REGISTERED','OFFICE','MUMBAI','ROAD','TATA','JAMSHEDJI','LIMITED','CORPORATION',
-  'PETROLEUM','HINDUSTAN','GOVERNMENT','INDIA','ENTERPRISE','CIN','FORM','TYPE','SALES','TAX',
-  'DESCRIPTION','ITEM','QTY','VOLUME','RATE','UNIT','AMOUNT','EXTENDED','SR','ST','CD','UT','TANK'
-]);
+function markTag(id, found){
+  const el = document.getElementById(id);
+  el.textContent = found ? 'found' : 'not found';
+  el.classList.toggle('found', found);
+}
 
 function extractFields(text){
-  const tokens = text.split(/\s+/).filter(Boolean);
+  const norm = text.replace(/\r/g, '');
 
-  function findNear(labelParts, valueRegex, window){
-    window = window || 12;
-    for (let i=0; i<tokens.length; i++){
-      let matched = true;
-      for (let j=0; j<labelParts.length; j++){
-        if (!tokens[i+j] || !labelParts[j].test(tokens[i+j])) { matched = false; break; }
-      }
-      if (matched){
-        const start = Math.max(0, i - window);
-        const end = Math.min(tokens.length, i + labelParts.length + window);
-        for (let k=start; k<end; k++){
-          if (k >= i && k < i + labelParts.length) continue; // skip the label tokens themselves
-          const clean = tokens[k].replace(/[.,:;]+$/, '');
-          if (STOPWORDS.has(clean.toUpperCase())) continue; // skip other header/column noise words
-          if (valueRegex.test(clean)) return clean;
-        }
-      }
-    }
-    return '';
-  }
+  // --- Vehicle / Lorry number ---
+  let vehicle = '';
+  let m = norm.match(/DELIVERED TO:?\s*\d+\s+([A-Z]{2}\s?\d{1,2}\s?[A-Z]{1,3}\s?\d{3,4})\s*CONT/i);
+  if (!m) m = norm.match(/VEHICLE\s*NO\.?\s*\n?\s*([A-Z]{2}\s?\d{1,2}\s?[A-Z]{1,3}\s?\d{3,4})/i);
+  if (!m) m = norm.match(/\b([A-Z]{2}\s?\d{2}\s?[A-Z]{1,2}\s?\d{4})\b/);
+  if (m) vehicle = m[1].replace(/\s+/g, '');
+  document.getElementById('f-vehicle').value = vehicle;
+  markTag('tag-vehicle', !!vehicle);
 
-  const vehicleNo = findNear([/^VEHICLE$/i, /^NO\.?$/i], /^[A-Z]{2}\d{1,2}[A-Z]{1,3}\d{3,4}$/);
-  const invoiceNo = findNear([/^INVOICE$/i, /^NO\.?$/i], /^\d{6,10}$/);
-  const transporterName = findNear([/^CARRIER$/i, /^NAME$/i], /^[A-Z]{3,}$/);
+  // --- Invoice number ---
+  let invoice = '';
+  m = norm.match(/VIDE:?\s*INVOICE\s*No\.?:?\s*(\d{5,})/i);
+  if (!m) m = norm.match(/INVOICE\s*NO\.?\s*\n?\s*(\d{5,})/i);
+  if (m) invoice = m[1];
+  document.getElementById('f-invoice').value = invoice;
+  markTag('tag-invoice', !!invoice);
 
+  // --- Transporter / Carrier name ---
+  let transporter = '';
+  m = norm.match(/VEHICLE\s*NO\.?\s*CARRIER\s*NO\.?\s*CARRIER\s*NAME\s*MODE\s*LOAD\s*NO\.?\s*\n?\s*[A-Z0-9]+\s+\d+\s+([A-Z][A-Z .&\-]*?)\s+\d+\s+\d+/i);
+  if (!m) m = norm.match(/CARRIER\s*NAME\s*\n?\s*([A-Z][A-Z .&\-]{2,30})/i);
+  if (m) transporter = m[1].trim();
+  document.getElementById('f-transporter').value = transporter;
+  markTag('tag-transporter', !!transporter);
+
+  // --- Product: MS or HSD ---
   let product = '';
-  if (/\bHSD\b/i.test(text)) product = 'HSD';
-  else if (/\bMS\b(?!\/HSD)/i.test(text)) product = 'MS';
-
-  return { vehicleNo, invoiceNo, transporterName, product };
+  m = norm.match(/\b(MS|HSD)\b[^\n]{0,25}Duty Paid/i);
+  if (!m) {
+    if (/\bHSD\b/i.test(norm)) product = 'HSD';
+    else if (/\bMS\b/i.test(norm)) product = 'MS';
+  } else {
+    product = m[1].toUpperCase();
+  }
+  if (product) {
+    const radio = document.querySelector(`input[name="product"][value="${product}"]`);
+    if (radio) radio.checked = true;
+  }
+  markTag('tag-product', !!product);
+  updateProductHighlight();
 }
 
-function badge(id, found){
-  document.getElementById(id).innerHTML = found
-    ? '<span class="badge auto">auto</span>'
-    : '<span class="badge manual">check</span>';
-}
-
-function populateReview(f){
-  document.getElementById('vehicleNo').value = f.vehicleNo || '';
-  document.getElementById('invoiceNo').value = f.invoiceNo || '';
-  document.getElementById('transporterName').value = f.transporterName || '';
-  document.getElementById('product').value = f.product === 'HSD' ? 'HSD' : (f.product === 'MS' ? 'MS' : 'MS');
-
-  badge('badge-vehicle', !!f.vehicleNo);
-  badge('badge-invoice', !!f.invoiceNo);
-  badge('badge-transporter', !!f.transporterName);
-  badge('badge-product', !!f.product);
+document.querySelectorAll('input[name="product"]').forEach(r => {
+  r.addEventListener('change', updateProductHighlight);
+});
+function updateProductHighlight(){
+  document.getElementById('lbl-ms').classList.toggle('active', document.querySelector('input[value="MS"]').checked);
+  document.getElementById('lbl-hsd').classList.toggle('active', document.querySelector('input[value="HSD"]').checked);
 }
 
 document.getElementById('resetBtn').addEventListener('click', () => {
   fileInput.value = '';
-  fnameEl.textContent = '';
-  reviewSection.style.display = 'none';
-  generateSection.style.display = 'none';
-  setStatus('');
-  setStage(1);
-  window.scrollTo({top:0, behavior:'smooth'});
+  fileMeta.classList.remove('show');
+  statusEl.classList.remove('show');
+  reviewCard.style.display = 'none';
+  generateCard.style.display = 'none';
+  ['f-vehicle','f-invoice','f-transporter'].forEach(id => document.getElementById(id).value = '');
+  document.querySelectorAll('input[name="product"]').forEach(r => r.checked = false);
+  updateProductHighlight();
 });
 
-document.getElementById('genBtn').addEventListener('click', () => {
-  setStage(3);
-  const data = {
-    vehicleNo: document.getElementById('vehicleNo').value.trim() || '—',
-    invoiceNo: document.getElementById('invoiceNo').value.trim() || '—',
-    product: document.getElementById('product').value,
-    transporterName: document.getElementById('transporterName').value.trim() || '—',
-  };
-  data.roTank = data.product === 'MS' ? '1' : '2';
-  buildPdf(data);
-});
+document.getElementById('genBtn').addEventListener('click', generatePdf);
 
-function buildPdf(data){
+function generatePdf(){
+  const vehicle = document.getElementById('f-vehicle').value.trim();
+  const invoice = document.getElementById('f-invoice').value.trim();
+  const transporter = document.getElementById('f-transporter').value.trim();
+  const productEl = document.querySelector('input[name="product"]:checked');
+  const product = productEl ? productEl.value : '';
+  const tank = product === 'MS' ? 'Tank 1' : (product === 'HSD' ? 'Tank 2' : '');
+  const layout = document.querySelector('input[name="layout"]:checked').value;
+
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-  const pageW = 210, pageH = 297;
-  const margin = 8;
-  const gap = 4;
-  const cellW = (pageW - margin*2 - gap) / 2;
-  const cellH = (pageH - margin*2 - gap) / 2;
 
-  const positions = [
-    [margin, margin],
-    [margin + cellW + gap, margin],
-    [margin, margin + cellH + gap],
-    [margin + cellW + gap, margin + cellH + gap],
-  ];
+  const cells = layout === '4'
+    ? [ [8, 8, 97, 138], [107, 8, 97, 138], [8, 149, 97, 138], [107, 149, 97, 138] ]
+    : [ [10, 10, 190, 277] ];
 
-  positions.forEach(([x,y]) => drawLabel(doc, x, y, cellW, cellH, data));
-  doc.save('tank-lorry-sample-labels-' + (data.invoiceNo !== '—' ? data.invoiceNo : 'label') + '.pdf');
-  setStatus('PDF generated and downloaded.', 'ok');
+  cells.forEach(([x, y, w, h], i) => {
+    if (i > 0 && layout === '1') doc.addPage();
+    drawLabel(doc, x, y, w, h, { vehicle, invoice, transporter, product, tank });
+  });
+
+  doc.save('sample-label-' + (invoice || 'filled') + '.pdf');
 }
 
 function drawLabel(doc, x, y, w, h, data){
-  doc.setDrawColor(60,60,60);
-  doc.setLineWidth(0.2);
+  doc.setLineWidth(0.3);
   doc.rect(x, y, w, h);
 
-  let cy = y + 5;
-  const left = x + 3;
-  const right = x + w - 3;
-  const lh = 3.6;
+  let cy = y + 6;
+  const left = x + 4;
+  const right = x + w - 4;
+  const lh = 4.6;
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.text('SAMPLE LABEL - TANK LORRY RETENTION SAMPLE', x + w/2, cy, {align:'center'});
-  cy += lh;
+  doc.setFontSize(9);
+  doc.text('SAMPLE LABEL - TANK LORRY RETENTION SAMPLE', x + w / 2, cy, { align: 'center' });
+  cy += lh - 1;
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
-  doc.text('(DRAWN AT RETAIL OUTLETS)', x + w/2, cy, {align:'center'});
-  cy += lh + 0.5;
-
-  doc.setFontSize(6.6);
-  doc.text('SUPPLY LOCATION: JABALPUR, REGION: REWA', left, cy);
+  doc.setFontSize(7.5);
+  doc.text('(DRAWN AT RETAIL OUTLETS)', x + w / 2, cy, { align: 'center' });
   cy += lh;
 
-  const lines = [
-    '1. Name & address of Retail Outlet: M/s VIBHA FILLING STATION,',
-    '    Rajapur (Teonthar)',
-    '2. Name of the Oil Company: HPCL',
-    '3. Product: ' + data.product,
-    '4. Source of sample: TANK LORRY',
-  ];
+  doc.setFontSize(8);
+  doc.text('SUPPLY LOCATION: JABALPUR', left, cy);
+  doc.text('REGION: REWA', right, cy, { align: 'right' });
+  cy += lh + 1;
 
-  lines.forEach(l => { doc.text(l, left, cy); cy += lh; });
+  const line = (txt) => {
+    const wrapped = doc.splitTextToSize(txt, w - 8);
+    doc.text(wrapped, left, cy);
+    cy += lh * wrapped.length;
+  };
 
-  cy += 0.5;
+  line('1. Name & address of the Retail Outlet: M/s VIBHA FILLING STATION, Rajapur (Teonthar)');
+  line('2. Name of the Oil Company: HPCL');
+
+  // Product line with MS/HSD marked
+  doc.text('3. Product:', left, cy);
+  let px = left + doc.getTextWidth('3. Product: ') + 2;
+  doc.setFont(data.product === 'MS' ? 'helvetica' : 'helvetica', data.product === 'MS' ? 'bold' : 'normal');
+  doc.text('MS', px, cy);
+  px += doc.getTextWidth('MS') + 3;
+  doc.setFont('helvetica', 'normal');
+  doc.text('/', px, cy);
+  px += doc.getTextWidth('/') + 3;
+  doc.setFont('helvetica', data.product === 'HSD' ? 'bold' : 'normal');
+  doc.text('HSD', px, cy);
+  doc.setFont('helvetica', 'normal');
+  cy += lh;
+
+  line('4. Source of sample: TANK LORRY');
+
+  // 5. Tank Lorry No & Invoice No on separate lines
+  doc.text('5. Tank Lorry No.', left, cy);
   doc.setFont('helvetica', 'bold');
-  doc.text('5. Tank Lorry No.: ' + data.vehicleNo, left, cy);
-  cy += lh;
-  doc.text('    Invoice No.: ' + data.invoiceNo, left, cy);
+  doc.text(data.vehicle || '……………………', left + 32, cy);
   doc.setFont('helvetica', 'normal');
-  cy += lh + 0.5;
-
-  doc.text('6. Samples drawn on ____________ at ____________ hours', left, cy);
   cy += lh;
-  doc.text('7. Density at 15°C  a) as per Challan ____________', left, cy);
-  cy += lh;
-  doc.text('    b) of sample collected from lorry ____________', left, cy);
-  cy += lh + 0.5;
 
+  doc.text('   Invoice No.', left, cy);
   doc.setFont('helvetica', 'bold');
-  doc.text('8. RO Tank No. of Product decanted: ' + data.roTank, left, cy);
+  doc.text(data.invoice || '……………………', left + 32, cy);
   doc.setFont('helvetica', 'normal');
-  cy += lh + 0.5;
-
-  doc.text('9. Plastic Seal Nos. of Aluminium container: ____________', left, cy);
   cy += lh;
-  doc.text('10. Plastic Seal Nos. of wooden box: ____________', left, cy);
-  cy += lh + 1.5;
 
-  doc.setFontSize(6);
-  const cert = 'Certified that empty containers are rinsed in my presence with the same product just before drawing of samples and the sample is retained after proper labeling and sealing.';
-  const wrapped = doc.splitTextToSize(cert, w - 6);
-  wrapped.forEach(l => { doc.text(l, left, cy); cy += 3; });
+  line('6. Samples drawn on ……………………… at ……………… hours');
+  line('7. Density at 15 Deg C   a) as recorded in the Challan …………………..');
+  line('    b) of sample collected from the lorry …………………………………….');
+
+  doc.text('8. RO Tank No. of Product decanted:', left, cy);
+  doc.setFont('helvetica', 'bold');
+  doc.text(data.tank || '……………………', left + 62, cy);
+  doc.setFont('helvetica', 'normal');
+  cy += lh;
+
+  line('9. Plastic Seal Nos. of Aluminium container: …………………………');
+  line('10. Plastic Seal Nos. of wooden box: ……………………………………');
   cy += 1;
 
-  doc.setFontSize(6.6);
-  doc.text('Signature of Dealer/Representative: ____________', left, cy);
-  cy += lh;
-  doc.text('Place: Rajapur, Teonthar        Date: ____________', left, cy);
-  cy += lh;
-  doc.text('Name of T/L driver: ____________', left, cy);
-  cy += lh;
-  doc.text('Signature of T/L driver: ____________', left, cy);
-  cy += lh;
+  const cert = 'Certified that empty containers are rinsed in my presence with the same product just before drawing of samples and the sample is retained after proper labeling and sealing.';
+  const certWrapped = doc.splitTextToSize(cert, w - 8);
+  doc.setFontSize(7);
+  doc.text(certWrapped, left, cy);
+  cy += 3.6 * certWrapped.length + 1;
+  doc.setFontSize(8);
+
+  line("Signature of the Dealer / Dealer's representative: ……………………     Seal/rubber stamp");
+  line('Place: Rajapur, Teonthar');
+  cy += lh 
+  line('Date: ……………………………………..');
+  cy += lh 
+  line('Signature of T/L driver: ………………………');
+
+  doc.text("Transporter's name:", left, cy);
   doc.setFont('helvetica', 'bold');
-  doc.text('Transporter\'s name: ' + data.transporterName, left, cy);
+  const twrapped = doc.splitTextToSize(data.transporter || '……………………………………', w - 8 - doc.getTextWidth("Transporter's name: "));
+  doc.text(twrapped, left + doc.getTextWidth("Transporter's name: ") + 1, cy);
   doc.setFont('helvetica', 'normal');
-  cy += lh;
-  doc.setFontSize(6);
-  doc.text('Oil Company: HINDUSTAN PETROLEUM CORPORATION LIMITED', left, cy);
+  cy += lh * twrapped.length + 1;
+
+  doc.setFont('helvetica', 'bold');
+  doc.text('Oil Company: HINDUSTAN PETROLEUM CORPORATION LIMITED', x + w / 2, y + h - 4, { align: 'center' });
+  doc.setFont('helvetica', 'normal');
 }
 </script>
 </body>
