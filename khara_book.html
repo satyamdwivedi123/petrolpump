@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <style>
+    :root {
+      --primary: #1e6f5c;
+      --primary-dark: #16523f;
+      --danger: #b3261e;
+      --bg: #f5f7f6;
+      --card: #ffffff;
+      --text: #1c1c1c;
+      --muted: #6b7280;
+      --border: #e2e5e4;
+    }
+    * { box-sizing: border-box; }
+    body {
+      font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: var(--bg);
+      margin: 0;
+      color: var(--text);
+    }
+    header {
+      background: var(--primary);
+      color: white;
+      padding: 16px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    header h1 { font-size: 20px; margin: 0; }
+    nav {
+      display: flex;
+      gap: 4px;
+      background: var(--primary-dark);
+      padding: 0 12px;
+      overflow-x: auto;
+    }
+    nav button {
+      background: none;
+      border: none;
+      color: #dbeee8;
+      padding: 12px 14px;
+      font-size: 14px;
+      cursor: pointer;
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+    }
+    nav button.active {
+      color: white;
+      border-bottom: 3px solid white;
+      font-weight: 600;
+    }
+    main { padding: 16px; max-width: 900px; margin: 0 auto; }
+    .tab { display: none; }
+    .tab.active { display: block; }
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 14px;
+    }
+    .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    @media (max-width: 640px) { .grid3 { grid-template-columns: 1fr; } }
+    .stat { text-align: center; }
+    .stat .num { font-size: 24px; font-weight: 700; }
+    .stat .lbl { color: var(--muted); font-size: 13px; }
+    .owed { color: var(--danger); }
+    .advance { color: var(--primary); }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 13px; }
+    input, select, textarea {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    label { font-size: 13px; color: var(--muted); display: block; margin-bottom: 4px; }
+    button.btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 11px 16px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+    button.btn.secondary { background: #eef2f1; color: var(--text); }
+    button.btn.danger { background: var(--danger); }
+    .type-toggle { display: flex; gap: 8px; margin-bottom: 10px; }
+    .type-toggle button {
+      flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--border);
+      background: white; cursor: pointer; font-weight: 600;
+    }
+    .type-toggle button.credit-active { background: #fdeceb; border-color: var(--danger); color: var(--danger); }
+    .type-toggle button.payment-active { background: #e8f4f0; border-color: var(--primary); color: var(--primary); }
+    .user-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+    .user-row:last-child { border-bottom: none; }
+    .balance-pos { color: var(--danger); font-weight: 600; }
+    .balance-neg { color: var(--primary); font-weight: 600; }
+    .balance-zero { color: var(--muted); }
+    .kyc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; }
+    .kyc-item { border: 1px dashed var(--border); border-radius: 8px; padding: 10px; text-align: center; font-size: 13px; }
+    .kyc-item a { color: var(--primary); font-size: 12px; }
+    .msg { padding: 10px; border-radius: 8px; margin-bottom: 10px; font-size: 14px; }
+    .msg.success { background: #e8f4f0; color: var(--primary-dark); }
+    .msg.error { background: #fdeceb; color: var(--danger); }
+    .search-box { margin-bottom: 10px; }
+    .user-detail-card { display: none; }
+    .loading-overlay { text-align: center; color: var(--muted); padding: 20px; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>📒 KharaBook</h1>
+  <span id="headerCount" style="font-size:13px;opacity:0.85;"></span>
+</header>
+
+<nav>
+  <button class="navbtn active" data-tab="dashboard">Dashboard</button>
+  <button class="navbtn" data-tab="addEntry">Add Entry</button>
+  <button class="navbtn" data-tab="users">Users &amp; KYC</button>
+  <button class="navbtn" data-tab="addUser">New User</button>
+</nav>
+
+<main>
+  <div id="globalMsg"></div>
+
+  <!-- DASHBOARD -->
+  <div class="tab active" id="dashboard">
+    <div class="card grid3">
+      <div class="stat"><div class="num" id="dTotalUsers">-</div><div class="lbl">Total Users</div></div>
+      <div class="stat"><div class="num owed" id="dTotalOwed">-</div><div class="lbl">Total They Owe You</div></div>
+      <div class="stat"><div class="num advance" id="dTotalAdvance">-</div><div class="lbl">Total Advance Paid</div></div>
+    </div>
+
+    <div class="card">
+      <h3>Top Debtors (owe you the most)</h3>
+      <table id="topDebtorsTable"><thead><tr><th>Name</th><th>Phone</th><th>Owes</th></tr></thead><tbody></tbody></table>
+    </div>
+
+    <div class="card">
+      <h3>Top Payments Received</h3>
+      <table id="topPaymentsTable"><thead><tr><th>Name</th><th>Amount</th><th>Date</th></tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <!-- ADD ENTRY -->
+  <div class="tab" id="addEntry">
+    <div class="card">
+      <h3>Add Entry</h3>
+      <label>Select User</label>
+      <select id="entryUser"></select>
+
+      <div class="type-toggle">
+        <button type="button" id="btnCredit" onclick="setTxnType('CREDIT')">➕ They Took (Credit)</button>
+        <button type="button" id="btnPayment" onclick="setTxnType('PAYMENT')">➖ They Paid (Payment)</button>
+      </div>
+
+      <label>Amount (₹)</label>
+      <input type="number" id="entryAmount" placeholder="e.g. 250" min="1">
+
+      <label>Note (item / reason)</label>
+      <input type="text" id="entryNote" placeholder="e.g. Rice 5kg, or Cash payment">
+
+      <label>Bill Photo (optional — image or PDF of the receiving bill)</label>
+      <input type="file" id="entryBillFile" accept="image/*,application/pdf">
+
+      <button class="btn" id="saveEntryBtn" onclick="submitEntry()">Save Entry</button>
+    </div>
+  </div>
+
+  <!-- USERS & KYC -->
+  <div class="tab" id="users">
+    <div class="card">
+      <input class="search-box" type="text" id="userSearch" placeholder="Search user by name or phone..." onkeyup="renderUserList()">
+      <div id="userList"></div>
+    </div>
+
+    <div class="card user-detail-card" id="userDetailCard">
+      <button class="btn secondary" onclick="closeUserDetail()">← Back to list</button>
+      <h3 id="udName"></h3>
+      <p id="udPhone" style="color:var(--muted);"></p>
+      <p><b>Balance: </b><span id="udBalance"></span></p>
+
+      <h4>KYC Documents</h4>
+      <div class="kyc-grid">
+        <div class="kyc-item">Aadhar<br><input type="file" accept="image/*,application/pdf" onchange="uploadKYC(this,'Aadhar')"><div id="kyc_Aadhar"></div></div>
+        <div class="kyc-item">PAN<br><input type="file" accept="image/*,application/pdf" onchange="uploadKYC(this,'PAN')"><div id="kyc_PAN"></div></div>
+        <div class="kyc-item">Cheque<br><input type="file" accept="image/*,application/pdf" onchange="uploadKYC(this,'Cheque')"><div id="kyc_Cheque"></div></div>
+        <div class="kyc-item">Other<br><input type="file" accept="image/*,application/pdf" onchange="uploadKYC(this,'Other')"><div id="kyc_Other"></div></div>
+      </div>
+
+      <h4>Ledger History</h4>
+      <table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Note</th><th>Balance</th><th>Bill</th></tr></thead>
+        <tbody id="udLedger"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- NEW USER -->
+  <div class="tab" id="addUser">
+    <div class="card">
+      <h3>Create New User</h3>
+      <label>Name</label>
+      <input type="text" id="newUserName" placeholder="Customer name">
+      <label>Phone</label>
+      <input type="text" id="newUserPhone" placeholder="10-digit phone number">
+      <button class="btn" onclick="createUser()">Create User</button>
+    </div>
+  </div>
+</main>
+
+<script>
+// ======= CONNECTION TO YOUR DEPLOYED APPS SCRIPT BACKEND =======
+const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyTMe7dWiz0pB7bf3AiFAptlVpu41jmlnPKGLRUNSVReHjzq-LgcQKwPndZbUsgGT7Z/exec';
+
+// Calls the Apps Script backend. action = function name, params = argument object.
+// Uses text/plain content type to avoid a CORS preflight (Apps Script doesn't handle OPTIONS).
+function callAPI(action, params) {
+  return fetch(WEB_APP_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ action: action, params: params || {} })
+  })
+  .then(function (res) { return res.json(); })
+  .then(function (res) {
+    if (!res.success) throw new Error(res.error || 'Unknown error from backend.');
+    return res.data;
+  });
+}
+
+let currentUsers = [];
+let currentTxnType = 'CREDIT';
+
+// ---------- NAV ----------
+document.querySelectorAll('.navbtn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.navbtn').forEach(b => b.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(btn.dataset.tab).classList.add('active');
+    if (btn.dataset.tab === 'dashboard') loadDashboard();
+    if (btn.dataset.tab === 'users') loadUsers();
+    if (btn.dataset.tab === 'addEntry') loadUsers(true);
+  });
+});
+
+function showMsg(text, type) {
+  const el = document.getElementById('globalMsg');
+  el.innerHTML = '<div class="msg ' + type + '">' + text + '</div>';
+  if (type !== 'loading') setTimeout(() => { el.innerHTML = ''; }, 4000);
+}
+
+// ---------- INIT ----------
+window.onload = function () {
+  loadDashboard();
+  loadUsers();
+};
+
+// ---------- DASHBOARD ----------
+function loadDashboard() {
+  callAPI('getDashboardData').then(renderDashboard).catch(onError);
+}
+function renderDashboard(d) {
+  document.getElementById('dTotalUsers').textContent = d.totalUsers;
+  document.getElementById('dTotalOwed').textContent = '₹' + d.totalOwed.toLocaleString('en-IN');
+  document.getElementById('dTotalAdvance').textContent = '₹' + d.totalAdvance.toLocaleString('en-IN');
+  document.getElementById('headerCount').textContent = d.totalUsers + '/500 users';
+
+  const dTbody = document.querySelector('#topDebtorsTable tbody');
+  dTbody.innerHTML = d.topDebtors.map(u =>
+    '<tr><td>' + u.Name + '</td><td>' + (u.Phone || '-') + '</td><td class="balance-pos">₹' + u.Balance.toLocaleString('en-IN') + '</td></tr>'
+  ).join('') || '<tr><td colspan="3">No outstanding balances 🎉</td></tr>';
+
+  const pTbody = document.querySelector('#topPaymentsTable tbody');
+  pTbody.innerHTML = d.topPayments.map(p =>
+    '<tr><td>' + p.Name + '</td><td class="balance-neg">₹' + p.Amount.toLocaleString('en-IN') + '</td><td>' + new Date(p.Date).toLocaleDateString('en-IN') + '</td></tr>'
+  ).join('') || '<tr><td colspan="3">No payments yet</td></tr>';
+}
+
+// ---------- USERS ----------
+function loadUsers(forEntry) {
+  callAPI('getUsers').then(function (users) {
+    currentUsers = users;
+    if (forEntry) populateEntryDropdown();
+    else renderUserList();
+  }).catch(onError);
+}
+
+function populateEntryDropdown() {
+  const sel = document.getElementById('entryUser');
+  sel.innerHTML = currentUsers.map(u => '<option value="' + u.UserID + '">' + u.Name + ' (' + (u.Phone || 'no phone') + ')</option>').join('');
+}
+
+function renderUserList() {
+  const q = (document.getElementById('userSearch').value || '').toLowerCase();
+  const list = currentUsers.filter(u => u.Name.toLowerCase().includes(q) || String(u.Phone).includes(q));
+  const container = document.getElementById('userList');
+  container.innerHTML = list.map(u => {
+    const balClass = u.Balance > 0 ? 'balance-pos' : (u.Balance < 0 ? 'balance-neg' : 'balance-zero');
+    const balText = u.Balance > 0 ? 'Owes ₹' + u.Balance.toLocaleString('en-IN')
+                  : u.Balance < 0 ? 'Advance ₹' + Math.abs(u.Balance).toLocaleString('en-IN')
+                  : 'Settled';
+    return '<div class="user-row" onclick="openUserDetail(\'' + u.UserID + '\')">' +
+      '<span>' + u.Name + '<br><small style="color:var(--muted)">' + (u.Phone || '') + '</small></span>' +
+      '<span class="' + balClass + '">' + balText + '</span></div>';
+  }).join('') || '<p style="color:var(--muted)">No users yet. Create one in "New User".</p>';
+}
+
+function openUserDetail(userId) {
+  const u = currentUsers.find(x => x.UserID === userId);
+  document.getElementById('userDetailCard').style.display = 'block';
+  document.getElementById('userDetailCard').dataset.userId = userId;
+  document.getElementById('udName').textContent = u.Name;
+  document.getElementById('udPhone').textContent = u.Phone;
+  const balClass = u.Balance > 0 ? 'balance-pos' : (u.Balance < 0 ? 'balance-neg' : 'balance-zero');
+  document.getElementById('udBalance').innerHTML = '<span class="' + balClass + '">₹' + u.Balance.toLocaleString('en-IN') + '</span>';
+
+  ['Aadhar', 'PAN', 'Cheque', 'Other'].forEach(function (t) {
+    const url = u[t + '_URL'];
+    document.getElementById('kyc_' + t).innerHTML = url ? '<a href="' + url + '" target="_blank">View uploaded</a>' : '<span style="color:var(--muted)">Not uploaded</span>';
+  });
+
+  document.getElementById('udLedger').innerHTML = '<tr><td colspan="6">Loading...</td></tr>';
+  callAPI('getUserLedger', { userId: userId }).then(function (ledger) {
+    document.getElementById('udLedger').innerHTML = ledger.map(t =>
+      '<tr><td>' + new Date(t.Date).toLocaleDateString('en-IN') + '</td><td>' + t.Type + '</td><td>₹' + t.Amount + '</td><td>' + (t.Note || '') + '</td><td>₹' + t.RunningBalance + '</td><td>' +
+      (t.BillPDF_URL ? '<a href="' + t.BillPDF_URL + '" target="_blank">PDF</a>' : '-') + '</td></tr>'
+    ).join('') || '<tr><td colspan="6">No transactions yet</td></tr>';
+  }).catch(onError);
+}
+
+function closeUserDetail() {
+  document.getElementById('userDetailCard').style.display = 'none';
+}
+
+// ---------- NEW USER ----------
+function createUser() {
+  const name = document.getElementById('newUserName').value.trim();
+  const phone = document.getElementById('newUserPhone').value.trim();
+  if (!name) { showMsg('Please enter a name.', 'error'); return; }
+  callAPI('addUser', { name: name, phone: phone }).then(function () {
+    showMsg('User "' + name + '" created.', 'success');
+    document.getElementById('newUserName').value = '';
+    document.getElementById('newUserPhone').value = '';
+    loadUsers();
+    loadDashboard();
+  }).catch(onError);
+}
+
+// ---------- ADD ENTRY ----------
+function setTxnType(type) {
+  currentTxnType = type;
+  document.getElementById('btnCredit').classList.toggle('credit-active', type === 'CREDIT');
+  document.getElementById('btnPayment').classList.toggle('payment-active', type === 'PAYMENT');
+}
+setTxnType('CREDIT');
+
+function fileToPdfBase64(file) {
+  return new Promise(function (resolve, reject) {
+    if (!file) { resolve(null); return; }
+    if (file.type === 'application/pdf') {
+      const reader = new FileReader();
+      reader.onload = function () { resolve(reader.result); };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+      return;
+    }
+    // image -> convert to a single-page PDF using jsPDF
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const img = new Image();
+      img.onload = function () {
+        const { jsPDF } = window.jspdf;
+        const orientation = img.width > img.height ? 'l' : 'p';
+        const pdf = new jsPDF({ orientation: orientation, unit: 'px', format: [img.width, img.height] });
+        pdf.addImage(img, 'JPEG', 0, 0, img.width, img.height);
+        resolve(pdf.output('datauristring'));
+      };
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+function submitEntry() {
+  const userId = document.getElementById('entryUser').value;
+  const amount = document.getElementById('entryAmount').value;
+  const note = document.getElementById('entryNote').value;
+  const fileInput = document.getElementById('entryBillFile');
+  const file = fileInput.files[0];
+  const btn = document.getElementById('saveEntryBtn');
+
+  if (!userId) { showMsg('Please select a user.', 'error'); return; }
+  if (!amount || amount <= 0) { showMsg('Enter a valid amount.', 'error'); return; }
+
+  btn.disabled = true;
+  showMsg('Saving...', 'loading');
+
+  fileToPdfBase64(file).then(function (base64) {
+    return callAPI('addTransaction', {
+      userId: userId,
+      type: currentTxnType,
+      amount: amount,
+      note: note,
+      billBase64: base64,
+      billFileName: file ? file.name.replace(/\.[^/.]+$/, '') : null
+    });
+  }).then(function () {
+    showMsg('Entry saved.', 'success');
+    document.getElementById('entryAmount').value = '';
+    document.getElementById('entryNote').value = '';
+    fileInput.value = '';
+    loadDashboard();
+    loadUsers(true);
+  }).catch(function (e) {
+    showMsg('Could not save: ' + e.message, 'error');
+  }).finally(function () {
+    btn.disabled = false;
+  });
+}
+
+// ---------- KYC ----------
+function uploadKYC(input, docType) {
+  const file = input.files[0];
+  if (!file) return;
+  const userId = document.getElementById('userDetailCard').dataset.userId;
+  showMsg('Uploading ' + docType + '...', 'loading');
+  fileToPdfBase64(file).then(function (base64) {
+    return callAPI('uploadKYCDoc', { userId: userId, docType: docType, base64Data: base64, fileName: file.name.replace(/\.[^/.]+$/, '') });
+  }).then(function (url) {
+    document.getElementById('kyc_' + docType).innerHTML = '<a href="' + url + '" target="_blank">View uploaded</a>';
+    showMsg(docType + ' uploaded.', 'success');
+    loadUsers();
+  }).catch(onError);
+}
+
+function onError(err) {
+  showMsg(err.message || String(err), 'error');
+}
+</script>
+</body>
+</html>
